@@ -1,0 +1,14 @@
+TODO
+
+- send ether to ant holders on fund
+- withdraw ether from crypto fiat
+- use drain factor when increasing price
+- incentivize purchasing ant when crypto fiats are increasing in price
+- purchase any crypto fiat with ant
+- purchase ant with any crypto fiat
+- upgrading options
+
+DONE
+
+* basic design for anote
+* basic design for crypto fiat currencies
