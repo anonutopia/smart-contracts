@@ -239,14 +239,14 @@ contract MintableToken is ERC20 {
 // ----------------------------------------------------------------------------
 contract ANT is MintableToken, Payable {
     using SafeMath for uint;
+    using SafeMath for uint8;
 
     mapping(address => uint) prices;
     address[] currencies;
     address[] users;
-    address constant AEURAddress = 0x0D2B64943f5a2E109BeEf0EF4C667447199bf1cd;
+    address constant AEURAddress = 0xc85C11976Df43eAb7b5C4F23D8De747320E03b2E;
 
     bool transfered = false;
-    uint drainFactor = 40;
     uint8 tierCounter = 0;
 
     uint public price = 100 szabo;
@@ -258,6 +258,7 @@ contract ANT is MintableToken, Payable {
     uint8 public crowdfundingFactor = 20;
     uint8 public referralFactor = 10;
     uint8 public antHolderFactor = 20;
+    uint8 public drainFactor = 40;
 
     function transferCurrencyOwnership(address _currency, address _newOwner) public onlyOwner {
         Currency c;
@@ -276,7 +277,7 @@ contract ANT is MintableToken, Payable {
             uint tierTokenCount = investment.div(price) * 1 ether;
             if (tierTokenCount >= tierSupply) {
                 tierTokenCount = tierSupply;
-                investment = investment.sub(tierTokenCount.div(1000000000000000000).mul(price));
+                investment = investment.sub(tierTokenCount.div(10**18).mul(price));
                 
                 tierSupply = tierSupplyHolder;
                 price = price.add(priceStep);
@@ -308,14 +309,27 @@ contract ANT is MintableToken, Payable {
             if (!userExists(_referral)) {
                 users.push(_referral);
             }
+            _referral.transfer(msg.value.div(100).mul(referralFactor));
         }
 
         emit Mint(msg.sender, tokenCount);
-        _totalSupply = SafeMath.add(_totalSupply, tokenCount);
-        owner.transfer(msg.value.div(10));
+        _totalSupply = _totalSupply.add(tokenCount);
+        owner.transfer(msg.value.div(100).mul(crowdfundingFactor));
         fundingsNumber++;
 
         return true;
+    }
+
+    function withdraw(uint tokenCount) public returns (bool) {
+        if (balances[msg.sender] >= tokenCount) {
+            uint withdrawal = tokenCount.div(10**18).mul(price.div(10**18)) * getCurrencyPrice(AEURAddress);
+            balances[msg.sender] = balances[msg.sender].sub(tokenCount);
+            _totalSupply = _totalSupply.sub(tokenCount);
+            msg.sender.transfer(withdrawal);
+            return true;
+        } else {
+            return false;
+        }
     }
 
     function createCryptoFiat(address _currency) public payable returns (bool) {
