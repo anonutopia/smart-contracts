@@ -2,11 +2,13 @@ TODO
 
 - send ether to ant holders on fund
 - withdraw ether from crypto fiat
-- use drain factor when increasing price
 - incentivize purchasing ant when crypto fiats are increasing in price
+- incentivize purchasing ant by decreasing price
 - purchase any crypto fiat with ant
 - purchase ant with any crypto fiat
 - upgrading options
+- premine
+- test everything
 
 DONE
 
