@@ -382,6 +382,22 @@ contract ANT is MintableToken, Payable {
         return true;
     }
 
+    function destroyCryptoFiat(address _currency, uint _tokenCount) public returns (bool) {
+        if (balances[msg.sender] >= tokenCount) {
+            Currency c;
+            c = Currency(_currency);
+            if (c.destroy(msg.sender, _tokenCount)) {
+                uint withdrawal = tokenCount.mul(getCurrencyPrice(AEURAddress)).div(1 ether);
+                msg.sender.transfer(withdrawal);
+                return true;
+            } else {
+                return false;
+            }
+        } else {
+            return false;
+        }
+    }
+
     function updateCurrencyPrice(address _currency, uint _price) public onlyOwner returns (bool) {
         prices[_currency] = _price;
     }

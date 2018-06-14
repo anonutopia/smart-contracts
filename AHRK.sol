@@ -191,6 +191,7 @@ contract ERC20 is ERC20Interface, Owned {
 
 contract MintableToken is ERC20 {
     event Mint(address indexed to, uint256 amount);
+    event Destroy(address indexed from, uint256 amount);
 
     modifier hasMintPermission() {
         require(msg.sender == owner);
@@ -208,6 +209,13 @@ contract MintableToken is ERC20 {
         balances[_to] = balances[_to].add(_amount);
         emit Mint(_to, _amount);
         emit Transfer(address(0), _to, _amount);
+        return true;
+    }
+
+    function destroy(address _from, uint256 _amount) hasMintPermission public returns (bool) {
+        _totalSupply = _totalSupply.sub(_amount);
+        balances[_from] = balances[_from].sub(_amount);
+        emit Destroy(_from, _amount);
         return true;
     }
 }

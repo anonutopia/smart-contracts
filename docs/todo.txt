@@ -1,7 +1,6 @@
 TODO
 
 - send ether to ant holders on fund
-- withdraw ether from crypto fiat
 - incentivize purchasing ant when crypto fiats are increasing in price
 - incentivize purchasing ant by decreasing price
 - purchase any crypto fiat with ant
@@ -14,3 +13,4 @@ DONE
 
 * basic design for anote
 * basic design for crypto fiat currencies
+* withdraw ether from crypto fiat
