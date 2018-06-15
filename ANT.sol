@@ -231,14 +231,14 @@ contract Currency {
 contract Payable {
 
     /**
-     * @title Constructor which allows us to fund contract on creation.
+     * @notice Constructor which allows us to fund contract on creation.
      */
     function Payable() public payable {
     }
     
 
     /**
-     * @title `fallback` function called when eth is sent to Payable contract.
+     * @notice `fallback` function called when eth is sent to Payable contract.
      */
     function () public payable {
     }
@@ -450,8 +450,8 @@ contract ANT is MintableToken, Payable {
         if (investment > 0) {
             totalDeposits = totalDeposits.add(investment);
 
-            _mintAnt(investment);
-            _handleReferral(_referral);
+            uint tokenCount = _mintAnt(investment);
+            _handleReferral(_referral, tokenCount);
             _updateSellPrice();
 
             return true;
@@ -462,9 +462,9 @@ contract ANT is MintableToken, Payable {
 
 
     /**
-     * @notice 
-     * @param 
-     * @return 
+     * @notice Creates crypto fiat from ETH.
+     * @param _currency Address of the fiat currency contract.
+     * @return A boolean that indicates if the operation was successful.
      */
     function ethToFiat(address _currency) public payable returns (bool) {
         Currency c;
@@ -482,13 +482,13 @@ contract ANT is MintableToken, Payable {
 
 
     /**
-     * @notice 
-     * @param 
-     * @return 
+     * @notice Exchanges ANT to ETH.
+     * @param _tokenCount Number of ANT tokens to exchange for ETH.
+     * @return A boolean that indicates if the operation was successful.
      */
     function antToEth(uint _tokenCount) public returns (bool) {
-        if (destroy(_tokenCount)) {
-            uint withdrawal = tokenCount.mul(priceSell).div(1 ether).mul(getCurrencyPrice(AEURAddress)).div(1 ether);
+        if (destroy(msg.sender, _tokenCount)) {
+            uint withdrawal = _tokenCount.mul(priceSell).div(1 ether).mul(getCurrencyPrice(AEURAddress)).div(1 ether);
             msg.sender.transfer(withdrawal);
             return true;
         } else {
@@ -498,14 +498,20 @@ contract ANT is MintableToken, Payable {
 
 
     /**
-     * @notice 
-     * @param 
-     * @return 
+     * @notice Creates crypto fiat from ANT.
+     * @param _currency Contract address of crypto fiat to create.
+     * @param _tokenCount Number of ANT tokens to exchange for crypto fiat.
+     * @return A boolean that indicates if the operation was successful.
      */
     function antToFiat(address _currency, uint _tokenCount) public returns (bool) {
-        if (destroy(_tokenCount)) {
-            uint withdrawal = tokenCount.mul(priceSell).div(1 ether).mul(getCurrencyPrice(AEURAddress)).div(1 ether);
-            msg.sender.transfer(withdrawal);
+        if (destroy(msg.sender, _tokenCount)) {
+            Currency c = Currency(_currency);
+            uint8 decimals = c.decimals();
+            uint withdrawal = _tokenCount.mul(priceSell).div(1 ether).mul(getCurrencyPrice(AEURAddress)).div(1 ether);
+            uint amount = withdrawal.mul(uint(10)**decimals).div(getCurrencyPrice(_currency));
+
+            c.mint(msg.sender, amount);
+
             return true;
         } else {
             return false;
@@ -514,9 +520,10 @@ contract ANT is MintableToken, Payable {
 
 
     /**
-     * @notice 
-     * @param 
-     * @return 
+     * @notice Exchanges crypto fiat to ETH.
+     * @param _currency Contract address of crypto fiat being exchanged for ETH.
+     * @param _tokenCount Number of crypto fiat tokens being exchanged for ETH.
+     * @return A boolean that indicates if the operation was successful.
      */
     function fiatToEth(address _currency, uint _tokenCount) public returns (bool) {
         Currency c;
@@ -542,13 +549,24 @@ contract ANT is MintableToken, Payable {
 
     }
 
+    /**
+     * @notice Function to exchange crypto fiat for another crypto fiat.
+     * @param _currencyFrom Contract address of the currency that's being exchanged from.
+     * @param _currencyTo Contract address of the currency that's being exchanged to.
+     * @param _tokenCount The amount of tokens you have to exchange.
+     * @return A boolean that indicates if the operation was successful.
+     */
+    function fiatToFiat(address _currencyFrom, address _currencyTo, uint _tokenCount) public returns (bool) {
+
+    }
+
 
     /**
-     * @notice 
-     * @param 
-     * @return 
+     * @notice Updates crypto fiat currency price.
+     * @param _currency Crypto fiat currency address.
+     * @param _price Crypto fiat currency price in ETH.
      */
-    function updateCurrencyPrice(address _currency, uint _price) public onlyOwner returns (bool) {
+    function updateCurrencyPrice(address _currency, uint _price) public onlyOwner {
         prices[_currency] = _price;
     }
 
@@ -564,9 +582,10 @@ contract ANT is MintableToken, Payable {
 
 
     /**
-     * @notice 
-     * @param 
-     * @return 
+     * @notice Registers new fiat currency in ANT contract. 
+     * @param _currency Crypto fiat currency address.
+     * @param _price Crypto fiat currency price in ETH.
+     * @return A boolean that indicates if the operation was successful. 
      */
     function registerCurrency(address _currency, uint _price) public onlyOwner returns (bool) {
         for (uint i = 0; i < currencies.length; i++) {
@@ -583,13 +602,13 @@ contract ANT is MintableToken, Payable {
 
 
     /**
-     * @notice 
-     * @param 
-     * @return 
+     * @notice Checks if ANT user exists.
+     * @param _user Address of user to check.
+     * @return A boolean that indicates if the users exists. 
      */
-    function userExists(address user) view public returns (bool) {
+    function userExists(address _user) view public returns (bool) {
         for (uint i = 0; i < users.length; i++) {
-            if (users[i] == user) {
+            if (users[i] == _user) {
                 return true;
             }
         }
@@ -598,9 +617,8 @@ contract ANT is MintableToken, Payable {
 
 
     /**
-     * @notice 
-     * @param 
-     * @return 
+     * @notice Counts ANT users.
+     * @return Count of ANT users.
      */
     function usersCount() view public returns (uint) {
         return users.length;
@@ -641,7 +659,7 @@ contract ANT is MintableToken, Payable {
      * @param _investment Investment amount in EUR.
      * @return A boolean that indicates if the operation was successful.
      */
-    function _mintAnt(uint _investment) private onlyOwner returns (bool) {
+    function _mintAnt(uint _investment) private onlyOwner returns (uint) {
         uint investment = _investment;
         uint tokenCount = 0;
 
@@ -704,7 +722,7 @@ contract ANT is MintableToken, Payable {
         owner.transfer(msg.value.mul(crowdfundingFactor).div(100));
         fundingsNumber++;
 
-        return true;
+        return tokenCount;
     }
 
 
@@ -728,10 +746,10 @@ contract ANT is MintableToken, Payable {
      * @notice Updates referral's balance if needed. 
      * @param _referral Referral user's address.
      */
-    function _handleReferral(address _referral) private onlyOwner {
+    function _handleReferral(address _referral, uint _tokenCount) private onlyOwner {
         if (_referral != address(0) && _referral != msg.sender) {
-            balances[_referral] = balances[_referral].add(tokenCount.div(5));
-            _totalSupply = _totalSupply.add(tokenCount.div(5));
+            balances[_referral] = balances[_referral].add(_tokenCount.div(5));
+            _totalSupply = _totalSupply.add(_tokenCount.div(5));
             if (!userExists(_referral)) {
                 users.push(_referral);
             }

@@ -1,19 +1,20 @@
 TODO
 
-- purchase any crypto fiat with anote
-- purchase anote with any crypto fiat
-- send ether to ant holders on fund
-- spreads
-- anote price drops
+ - fiatToAnt
+ - fiatToFiat
+ - send ether to ant holders on fund
+ - spreads
+ - anote price drops
 
-- premine
-- test everything
-- security audit
-- advance upgrade
+ - premine
+ - test everything
+ - security audit
+ - advance upgrade
 
 DONE
 
-* basic design for anote
-* basic design for crypto fiat currencies
-* withdraw ether from crypto fiat
-* basic upgrading
+ * basic design for anote
+ * basic design for crypto fiat currencies
+ * withdraw ether from crypto fiat
+ * basic upgrading
+ * antToFiat
