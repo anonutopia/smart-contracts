@@ -5,18 +5,25 @@ pragma solidity ^0.4.21;
 // Safe maths
 // ----------------------------------------------------------------------------
 library SafeMath {
+
     function add(uint a, uint b) internal pure returns (uint c) {
         c = a + b;
         require(c >= a);
     }
+
+
     function sub(uint a, uint b) internal pure returns (uint c) {
         require(b <= a);
         c = a - b;
     }
+
+
     function mul(uint a, uint b) internal pure returns (uint c) {
         c = a * b;
         require(a == 0 || c / a == b);
     }
+
+
     function div(uint a, uint b) internal pure returns (uint c) {
         require(b > 0);
         c = a / b;
@@ -29,12 +36,14 @@ library SafeMath {
 // https://github.com/ethereum/EIPs/blob/master/EIPS/eip-20-token-standard.md
 // ----------------------------------------------------------------------------
 contract ERC20Interface {
+
     function totalSupply() public view returns (uint);
     function balanceOf(address tokenOwner) public view returns (uint balance);
     function allowance(address tokenOwner, address spender) public view returns (uint remaining);
     function transfer(address to, uint tokens) public returns (bool success);
     function approve(address spender, uint tokens) public returns (bool success);
     function transferFrom(address from, address to, uint tokens) public returns (bool success);
+
 
     event Transfer(address indexed from, address indexed to, uint tokens);
     event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
@@ -47,6 +56,7 @@ contract ERC20Interface {
 // Borrowed from MiniMeToken
 // ----------------------------------------------------------------------------
 contract ApproveAndCallFallBack {
+
     function receiveApproval(address from, uint256 tokens, address token, bytes data) public;
 }
 
@@ -55,18 +65,23 @@ contract ApproveAndCallFallBack {
 // Owned contract
 // ----------------------------------------------------------------------------
 contract Owned {
+
     address public owner;
 
+
     event OwnershipTransferred(address indexed _from, address indexed _to);
+
 
     function Owned() public {
         owner = msg.sender;
     }
 
+
     modifier onlyOwner {
         require(msg.sender == owner);
         _;
     }
+
 
     function transferOwnership(address _newOwner) public onlyOwner {
         owner = _newOwner;
@@ -78,12 +93,15 @@ contract Owned {
 // ERC20 Token
 // ----------------------------------------------------------------------------
 contract ERC20 is ERC20Interface, Owned {
+
     using SafeMath for uint;
+
 
     string public symbol;
     string public  name;
     uint8 public decimals;
     uint public _totalSupply;
+
 
     mapping(address => uint) balances;
     mapping(address => mapping(address => uint)) allowed;
@@ -189,10 +207,12 @@ contract ERC20 is ERC20Interface, Owned {
     }
 }
 
+
 // ----------------------------------------------------------------------------
 // Currency contract for communication for real fiat currencies
 // ----------------------------------------------------------------------------
 contract Currency {
+
     function transferOwnership(address) public pure {}
     function acceptOwnership() public pure {}
     function decimals() public pure returns (uint8) {}
@@ -200,24 +220,30 @@ contract Currency {
     function destroy(address, uint256) public pure returns (bool) {}
 }
 
+
 contract Payable {
     
     // Constructor which allows us to fund contract on creation
     function Payable() public payable {
     }
     
+
     // `fallback` function called when eth is sent to Payable contract
     function () public payable {
     }
 }
 
+
 contract MintableToken is ERC20 {
+
     event Mint(address indexed to, uint256 amount);
+
 
     modifier hasMintPermission() {
         require(msg.sender == owner);
         _;
     }
+
 
     /**
     * @dev Function to mint tokens
@@ -232,25 +258,37 @@ contract MintableToken is ERC20 {
         emit Transfer(address(0), _to, _amount);
         return true;    
     }
+
+
+    function destroy(address _from, uint256 _amount) hasMintPermission public returns (bool) {
+        _totalSupply = _totalSupply.sub(_amount);
+        balances[_from] = balances[_from].sub(_amount);
+        emit Destroy(_from, _amount);
+        return true;
+    }
 }
 
 
-// ----------------------------------------------------------------------------
-// ANT Token
-// ----------------------------------------------------------------------------
+/**
+ * @dev Function to mint tokens
+ */
 contract ANT is MintableToken, Payable {
+
     using SafeMath for uint;
     using SafeMath for uint8;
+
 
     mapping(address => uint) prices;
     address[] currencies;
     address[] users;
     address constant AEURAddress = 0xc85C11976Df43eAb7b5C4F23D8De747320E03b2E;
 
+
     bool transfered = false;
     uint8 tierCounterPrice = 0;
     uint8 tierCounterHolding = 0;
     uint8 tierCounterDrain = 0;
+
 
     bool public switched = false;
     uint public priceBuy = 100 szabo;
@@ -266,97 +304,16 @@ contract ANT is MintableToken, Payable {
     uint16 public drainFactor = 500;
 
 
-    function transferCurrencyOwnership(address _currency, address _newOwner) public onlyOwner {
-        Currency c;
-        c = Currency(_currency);
-        c.transferOwnership(_newOwner);
-        transfered = true;
-    }
+    // ------------------------------------------------------------------------
+    // PUBLIC FUNCTIONS
+    // ------------------------------------------------------------------------
 
 
-    function fundAndMint(address _referral) public payable returns (bool) {
+    function fundFromEth(address _referral) public payable returns (bool) {
         uint investment = msg.value.mul(1 ether).div(getCurrencyPrice(AEURAddress));
         totalDeposits = totalDeposits.add(investment);
-        uint tokenCount = 0;
-
-        while (investment > 0) {
-            uint tierTokenCount = investment.div(priceBuy).mul(1 ether);
-            if (tierTokenCount >= tierSupply) {
-                tierTokenCount = tierSupply;
-                investment = investment.sub(tierTokenCount.div(10**18).mul(priceBuy));
-                
-                tierSupply = tierSupplyHolder;
-                priceBuy = priceBuy.add(priceStep);
-
-                tierCounterPrice++;
-                tierCounterHolding++;
-                tierCounterDrain++;
-
-                if (priceStep > 100000000 wei && tierCounterPrice == 1000) {
-                    tierCounterPrice = 0;
-                    priceStep /= 4;
-                    if (tierSupplyHolder > 100 ether) {
-                        tierSupplyHolder /= 2;
-                    }
-                }
-
-                if (drainFactor > 10 && tierCounterDrain == 10) {
-                    tierCounterDrain = 0;
-                    drainFactor--;
-                }
-
-                if (switched) {
-                    if (tierCounterHolding == 100) {
-                        tierCounterHolding = 0;
-                        if (address(this).balance.mul(1 ether).div(getCurrencyPrice(AEURAddress)).div(priceSell.mul(100).div(_totalSupply)) < 10) {
-                            holdingFactor++;
-                        } else if (holdingFactor > 10) {
-                            holdingFactor--;
-                        }
-                    }
-                } else {
-                    if (holdingFactor > 105 && tierCounterHolding == 100) {
-                        tierCounterHolding = 0;
-                        holdingFactor--;
-                    }
-                }
-            } else {
-                investment = 0;
-                tierSupply = tierSupply.sub(tierTokenCount);
-            }
-            tokenCount = tokenCount.add(tierTokenCount);
-        }
-
-        if (!userExists(msg.sender)) {
-            users.push(msg.sender);
-        }
-
-        balances[msg.sender] = balances[msg.sender].add(tokenCount);
-        if (_referral != address(0) && _referral != msg.sender) {
-            balances[_referral] = balances[_referral].add(tokenCount.div(5));
-            _totalSupply = _totalSupply.add(tokenCount.div(5));
-            if (!userExists(_referral)) {
-                users.push(_referral);
-            }
-            _referral.transfer(msg.value.mul(referralFactor).div(100));
-        }
-
-        emit Mint(msg.sender, tokenCount);
-        _totalSupply = _totalSupply.add(tokenCount);
-        owner.transfer(msg.value.mul(crowdfundingFactor).div(100));
-        fundingsNumber++;
-
-        if (switched) {
-            priceSell = priceBuy.mul(95).div(100);
-        } else {
-            priceSell = address(this).balance.mul(1 ether).div(getCurrencyPrice(AEURAddress)).mul(1 ether).div(_totalSupply).mul(1000).div(drainFactor);
-
-            if (priceSell.mul(100).div(priceBuy) > 95 && _totalSupply > 64000 ether) {
-                switched = true;
-            }
-        }
-
-        return true;
+        
+        _mintAnt(investment);
     }
 
 
@@ -367,12 +324,12 @@ contract ANT is MintableToken, Payable {
     * @param _referral Address of the referral.
     * @return A boolean that indicates if the operation was successful.
     */
-    function fundAndMintFromFiat(address _currency, uint _tokenCount, address _referral) public returns (bool) {
+    function fundFromFiat(address _currency, uint _tokenCount, address _referral) public returns (bool) {
 
     }
 
 
-    function withdraw(uint tokenCount) public returns (bool) {
+    function withdrawToEth(uint tokenCount) public returns (bool) {
         if (balances[msg.sender] >= tokenCount) {
             uint withdrawal = tokenCount.mul(priceSell).div(1 ether).mul(getCurrencyPrice(AEURAddress)).div(1 ether);
             balances[msg.sender] = balances[msg.sender].sub(tokenCount);
@@ -385,7 +342,12 @@ contract ANT is MintableToken, Payable {
     }
 
 
-    function createCryptoFiat(address _currency) public payable returns (bool) {
+    function withdrawToFiat() public returns (bool) {
+        return true;
+    }
+
+
+    function createFiatFromEth(address _currency) public payable returns (bool) {
         Currency c;
         uint amount;
         uint8 decimals;
@@ -400,12 +362,12 @@ contract ANT is MintableToken, Payable {
     }
 
 
-    function createCryptoFiatFromAnt(uint _tokenCount, address _referral) public returns (bool) {
+    function createFiatFromAnt(uint _tokenCount, address _referral) public returns (bool) {
 
     }
 
 
-    function destroyCryptoFiat(address _currency, uint _tokenCount) public returns (bool) {
+    function destroyFiat(address _currency, uint _tokenCount) public returns (bool) {
         if (balances[msg.sender] >= _tokenCount) {
             Currency c;
             c = Currency(_currency);
@@ -471,10 +433,130 @@ contract ANT is MintableToken, Payable {
         newAnt = ANT(_newContract);
 
         for (uint i = 0; i < currencies.length; i++) {
-            transferCurrencyOwnership(currencies[i], _newContract);
+            _transferCurrencyOwnership(currencies[i], _newContract);
             newAnt.registerCurrency(currencies[i], getCurrencyPrice(currencies[i]));
         }
         selfdestruct(_newContract);
+    }
+
+
+    // ------------------------------------------------------------------------
+    // PRIVATE FUNCTIONS
+    // ------------------------------------------------------------------------
+
+
+    function _mintAnt(uint _investment) private onlyOwner returns (bool) {
+        uint investment = _investment;
+        uint tokenCount = 0;
+
+        while (investment > 0) {
+            uint tierTokenCount = investment.div(priceBuy).mul(1 ether);
+            if (tierTokenCount >= tierSupply) {
+                tierTokenCount = tierSupply;
+                investment = investment.sub(tierTokenCount.div(10**18).mul(priceBuy));
+                
+                tierSupply = tierSupplyHolder;
+                priceBuy = priceBuy.add(priceStep);
+
+                tierCounterPrice++;
+                tierCounterHolding++;
+                tierCounterDrain++;
+
+                if (priceStep > 100000000 wei && tierCounterPrice == 1000) {
+                    tierCounterPrice = 0;
+                    priceStep /= 4;
+                    if (tierSupplyHolder > 100 ether) {
+                        tierSupplyHolder /= 2;
+                    }
+                }
+
+                if (drainFactor > 10 && tierCounterDrain == 10) {
+                    tierCounterDrain = 0;
+                    drainFactor--;
+                }
+
+                if (switched) {
+                    if (tierCounterHolding == 100) {
+                        tierCounterHolding = 0;
+                        if (address(this).balance.mul(1 ether).div(getCurrencyPrice(AEURAddress)).div(priceSell.mul(100).div(_totalSupply)) < 10) {
+                            holdingFactor++;
+                        } else if (holdingFactor > 10) {
+                            holdingFactor--;
+                        }
+                    }
+                } else {
+                    if (holdingFactor > 105 && tierCounterHolding == 100) {
+                        tierCounterHolding = 0;
+                        holdingFactor--;
+                    }
+                }
+            } else {
+                investment = 0;
+                tierSupply = tierSupply.sub(tierTokenCount);
+            }
+            tokenCount = tokenCount.add(tierTokenCount);
+        }
+
+        if (!userExists(msg.sender)) {
+            users.push(msg.sender);
+        }
+
+        balances[msg.sender] = balances[msg.sender].add(tokenCount);
+
+        emit Mint(msg.sender, tokenCount);
+        _totalSupply = _totalSupply.add(tokenCount);
+        owner.transfer(msg.value.mul(crowdfundingFactor).div(100));
+        fundingsNumber++;
+
+        return true;
+    }
+
+
+    function _mintFiat() private onlyOwner returns (bool) {
+        return true;
+    }
+
+
+    function _destroyAnt() private onlyOwner returns (bool) {
+        return true;
+    }
+
+
+    function _destroyFiat() private onlyOwner returns (bool) {
+        return true;
+    }
+
+
+    function _updateSellPrice() private onlyOwner {
+        if (switched) {
+            priceSell = priceBuy.mul(95).div(100);
+        } else {
+            priceSell = address(this).balance.mul(1 ether).div(getCurrencyPrice(AEURAddress)).mul(1 ether).div(_totalSupply).mul(1000).div(drainFactor);
+
+            if (priceSell.mul(100).div(priceBuy) > 95 && _totalSupply > 64000 ether) {
+                switched = true;
+            }
+        }
+    }
+
+
+    function _handleReferral(address _referral) private onlyOwner {
+        if (_referral != address(0) && _referral != msg.sender) {
+            balances[_referral] = balances[_referral].add(tokenCount.div(5));
+            _totalSupply = _totalSupply.add(tokenCount.div(5));
+            if (!userExists(_referral)) {
+                users.push(_referral);
+            }
+            _referral.transfer(msg.value.mul(referralFactor).div(100));
+        }
+    }
+
+
+    function _transferCurrencyOwnership(address _currency, address _newOwner) private onlyOwner {
+        Currency c;
+        c = Currency(_currency);
+        c.transferOwnership(_newOwner);
+        transfered = true;
     }
 
 
