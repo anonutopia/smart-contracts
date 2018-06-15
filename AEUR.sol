@@ -189,26 +189,57 @@ contract ERC20 is ERC20Interface, Owned {
     }
 }
 
+/**
+ * @title Mintable ERC20 token contract.
+ */
 contract MintableToken is ERC20 {
-    event Mint(address indexed to, uint256 amount);
 
+    /**
+     * @notice Smart ccontract events.
+     */
+    event Mint(address indexed to, uint256 amount);
+    event Destroy(address indexed from, uint256 amount);
+
+
+    /**
+     * @notice Checks if caller has mint permissions.
+     */
     modifier hasMintPermission() {
         require(msg.sender == owner);
         _;
     }
 
+
     /**
-    * @dev Function to mint tokens
-    * @param _to The address that will receive the minted tokens.
-    * @param _amount The amount of tokens to mint.
-    * @return A boolean that indicates if the operation was successful.
-    */
+     * @notice Function to mint tokens.
+     * @param _to The address that will receive the minted tokens.
+     * @param _amount The amount of tokens to mint.
+     * @return A boolean that indicates if the operation was successful.
+     */
     function mint(address _to, uint256 _amount) hasMintPermission public returns (bool) {
         _totalSupply = _totalSupply.add(_amount);
         balances[_to] = balances[_to].add(_amount);
         emit Mint(_to, _amount);
         emit Transfer(address(0), _to, _amount);
         return true;    
+    }
+
+
+    /**
+     * @notice Function to destroy tokens.
+     * @param _from The address that we will destroy tokens from.
+     * @param _amount The amount of tokens to destroy.
+     * @return A boolean that indicates if the operation was successful.
+     */
+    function destroy(address _from, uint256 _amount) hasMintPermission public returns (bool) {
+        if (balances[_from] >= _amount) {
+            _totalSupply = _totalSupply.sub(_amount);
+            balances[_from] = balances[_from].sub(_amount);
+            emit Destroy(_from, _amount);
+            return true;
+        } else {
+            return false;
+        }
     }
 }
 
