@@ -467,13 +467,9 @@ contract ANT is MintableToken, Payable {
      * @return A boolean that indicates if the operation was successful.
      */
     function ethToFiat(address _currency) public payable returns (bool) {
-        Currency c;
-        uint amount;
-        uint8 decimals;
-
-        c = Currency(_currency);
-        decimals = c.decimals();
-        amount = msg.value.mul(uint(10)**decimals).div(prices[_currency]);
+        Currency c = Currency(_currency);
+        uint8 decimals = c.decimals();
+        uint amount = msg.value.mul(uint(10)**decimals).div(prices[_currency]);
 
         c.mint(msg.sender, amount);
 
@@ -526,8 +522,8 @@ contract ANT is MintableToken, Payable {
      * @return A boolean that indicates if the operation was successful.
      */
     function fiatToEth(address _currency, uint _tokenCount) public returns (bool) {
-        Currency c;
-        c = Currency(_currency);
+        Currency c = Currency(_currency);
+
         if (c.destroy(msg.sender, _tokenCount)) {
             uint withdrawal = _tokenCount.mul(getCurrencyPrice(_currency)).div(1 ether);
             msg.sender.transfer(withdrawal);
@@ -545,8 +541,25 @@ contract ANT is MintableToken, Payable {
      * @param _referral Address of the referral.
      * @return A boolean that indicates if the operation was successful.
      */
-    function fiatToAnt(address _currency, uint _tokenCount, address _referral) public returns (bool) {
+    function fiatToAnt(address _currency, uint _tokenCount) public returns (bool) {
+        Currency c = Currency(_currency);
 
+        if (c.destroy(msg.sender, _tokenCount)) {
+            uint investment = tokenCount.mul(getCurrencyPrice(_currency)).div(getCurrencyPrice(AEURAddress));
+
+            if (investment > 0) {
+                totalDeposits = totalDeposits.add(investment);
+
+                uint tokenCount = _mintAnt(investment);
+                _updateSellPrice();
+
+                return true;
+            } else {
+                return false;
+            }
+        } else {
+            return false;
+        }
     }
 
     /**

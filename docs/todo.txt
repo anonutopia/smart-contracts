@@ -1,6 +1,5 @@
 TODO
 
- - fiatToAnt
  - fiatToFiat
  - send ether to ant holders on fund
  - spreads
@@ -18,3 +17,4 @@ DONE
  * withdraw ether from crypto fiat
  * basic upgrading
  * antToFiat
+ * fiatToAnt
