@@ -1,9 +1,10 @@
 pragma solidity ^0.4.21;
 
 
-// ----------------------------------------------------------------------------
-// Safe maths
-// ----------------------------------------------------------------------------
+
+/**
+ * @title Safe maths library for big numbers.
+ */
 library SafeMath {
 
     function add(uint a, uint b) internal pure returns (uint c) {
@@ -31,10 +32,11 @@ library SafeMath {
 }
 
 
-// ----------------------------------------------------------------------------
-// ERC Token Standard #20 Interface
-// https://github.com/ethereum/EIPs/blob/master/EIPS/eip-20-token-standard.md
-// ----------------------------------------------------------------------------
+
+/**
+ * @title ERC Token Standard #20 Interface.
+ * @notice https://github.com/ethereum/EIPs/blob/master/EIPS/eip-20-token-standard.md
+ */
 contract ERC20Interface {
 
     function totalSupply() public view returns (uint);
@@ -50,20 +52,20 @@ contract ERC20Interface {
 }
 
 
-// ----------------------------------------------------------------------------
-// Contract function to receive approval and execute function in one call
-//
-// Borrowed from MiniMeToken
-// ----------------------------------------------------------------------------
+
+/**
+ * @title Contract function to receive approval and execute function in one call (borrowed from MiniMeToken).
+ */
 contract ApproveAndCallFallBack {
 
     function receiveApproval(address from, uint256 tokens, address token, bytes data) public;
 }
 
 
-// ----------------------------------------------------------------------------
-// Owned contract
-// ----------------------------------------------------------------------------
+
+/**
+ * @title Owned smart contract.
+ */
 contract Owned {
 
     address public owner;
@@ -89,9 +91,10 @@ contract Owned {
 }
 
 
-// ----------------------------------------------------------------------------
-// ERC20 Token
-// ----------------------------------------------------------------------------
+
+/**
+ * @title ERC20 token contract.
+ */
 contract ERC20 is ERC20Interface, Owned {
 
     using SafeMath for uint;
@@ -208,11 +211,11 @@ contract ERC20 is ERC20Interface, Owned {
 }
 
 
-// ----------------------------------------------------------------------------
-// Currency contract for communication for real fiat currencies
-// ----------------------------------------------------------------------------
-contract Currency {
 
+/**
+ * @title For accessing crypto fiat contracts.
+ */
+contract Currency {
     function transferOwnership(address) public pure {}
     function acceptOwnership() public pure {}
     function decimals() public pure returns (uint8) {}
@@ -221,24 +224,43 @@ contract Currency {
 }
 
 
+
+/**
+ * @title Payable smart contract - can receive ETH.
+ */
 contract Payable {
-    
-    // Constructor which allows us to fund contract on creation
+
+    /**
+     * @title Constructor which allows us to fund contract on creation.
+     */
     function Payable() public payable {
     }
     
 
-    // `fallback` function called when eth is sent to Payable contract
+    /**
+     * @title `fallback` function called when eth is sent to Payable contract.
+     */
     function () public payable {
     }
 }
 
 
+
+/**
+ * @title Mintable ERC20 token contract.
+ */
 contract MintableToken is ERC20 {
 
+    /**
+     * @notice Smart ccontract events.
+     */
     event Mint(address indexed to, uint256 amount);
+    event Destroy(address indexed from, uint256 amount);
 
 
+    /**
+     * @notice Checks if caller has mint permissions.
+     */
     modifier hasMintPermission() {
         require(msg.sender == owner);
         _;
@@ -246,11 +268,11 @@ contract MintableToken is ERC20 {
 
 
     /**
-    * @dev Function to mint tokens
-    * @param _to The address that will receive the minted tokens.
-    * @param _amount The amount of tokens to mint.
-    * @return A boolean that indicates if the operation was successful.
-    */
+     * @notice Function to mint tokens.
+     * @param _to The address that will receive the minted tokens.
+     * @param _amount The amount of tokens to mint.
+     * @return A boolean that indicates if the operation was successful.
+     */
     function mint(address _to, uint256 _amount) hasMintPermission public returns (bool) {
         _totalSupply = _totalSupply.add(_amount);
         balances[_to] = balances[_to].add(_amount);
@@ -260,6 +282,12 @@ contract MintableToken is ERC20 {
     }
 
 
+    /**
+     * @notice Function to destroy tokens.
+     * @param _from The address that we will destroy tokens from.
+     * @param _amount The amount of tokens to destroy.
+     * @return A boolean that indicates if the operation was successful.
+     */
     function destroy(address _from, uint256 _amount) hasMintPermission public returns (bool) {
         _totalSupply = _totalSupply.sub(_amount);
         balances[_from] = balances[_from].sub(_amount);
@@ -269,39 +297,137 @@ contract MintableToken is ERC20 {
 }
 
 
+
 /**
- * @dev Function to mint tokens
+ * @title Main Anote (ANT) smart contract.
  */
 contract ANT is MintableToken, Payable {
 
+    /**
+     * @notice Libraries for smart contract.
+     */
     using SafeMath for uint;
     using SafeMath for uint8;
 
 
+    /**
+     * @notice Telling us if Anote is in stabilization mode.
+     */
+    bool public switched = false;
+
+
+    /**
+     * @notice Anote buy price in EUR.
+     */
+    uint public priceBuy = 100 szabo;
+
+
+    /**
+     * @notice Anote sell price in EUR.
+     */
+    uint public priceSell = 0;
+
+
+    /**
+     * @notice Step for increasing Anote buy price.
+     */
+    uint public priceStep = 10000 szabo;
+
+
+    /**
+     * @notice Total deposits in EUR at any given time.
+     */
+    uint public totalDeposits = 0;
+
+
+    /**
+     * @notice Number of all Anote fundings.
+     */
+    uint public fundingsNumber = 0;
+
+
+    /**
+     * @notice This holds tier supply.
+     */
+    uint public tierSupplyHolder = 64000 ether;
+
+
+    /**
+     * @notice Tier counter variable.
+     */
+    uint public tierSupply = tierSupplyHolder;
+
+
+    /**
+     * @notice This percentage goes for crowdfunding.
+     */
+    uint8 public crowdfundingFactor = 20;
+
+
+    /**
+     * @notice This percentage goes to funding referral.
+     */
+    uint8 public referralFactor = 10;
+
+
+    /**
+     * @notice This percentage is being held in the contract.
+     */
+    uint16 public holdingFactor = 500;
+
+
+    /**
+     * @notice This percentage of Anote has to be backuped up in EUR.
+     */
+    uint16 public drainFactor = 500;
+
+
+    /**
+     * @notice Crypto fiat prices.
+     */
     mapping(address => uint) prices;
+
+
+    /**
+     * @notice Crypto fiat currencies.
+     */
     address[] currencies;
+
+
+    /**
+     * @notice ANT users.
+     */
     address[] users;
+
+
+    /**
+     * @notice AEUR crypt fiat contract address.
+     */
     address constant AEURAddress = 0xc85C11976Df43eAb7b5C4F23D8De747320E03b2E;
 
 
+    /**
+     * @notice Variable used to make some functions state-changing.
+     */
     bool transfered = false;
+
+
+    /**
+     * @notice Tier counter for increasing price.
+     */
     uint8 tierCounterPrice = 0;
+
+
+    /**
+     * @notice Tier counter for decreasing holding factor.
+     */
     uint8 tierCounterHolding = 0;
+
+
+    /**
+     * @notice Tier counter for decreasing backup factor.
+     */
     uint8 tierCounterDrain = 0;
-
-
-    bool public switched = false;
-    uint public priceBuy = 100 szabo;
-    uint public priceSell = 0;
-    uint public priceStep = 10000 szabo;
-    uint public totalDeposits = 0;
-    uint public fundingsNumber = 0;
-    uint public tierSupplyHolder = 64000 ether;
-    uint public tierSupply = tierSupplyHolder;
-    uint8 public crowdfundingFactor = 20;
-    uint8 public referralFactor = 10;
-    uint16 public holdingFactor = 500;
-    uint16 public drainFactor = 500;
 
 
     // ------------------------------------------------------------------------
@@ -309,26 +435,45 @@ contract ANT is MintableToken, Payable {
     // ------------------------------------------------------------------------
 
 
+    /**
+     * @notice Creates ANT from ETH.
+     * @param _referral Address of the referral user.
+     * @return A boolean that indicates if the operation was successful.
+     */
     function fundFromEth(address _referral) public payable returns (bool) {
         uint investment = msg.value.mul(1 ether).div(getCurrencyPrice(AEURAddress));
-        totalDeposits = totalDeposits.add(investment);
         
-        _mintAnt(investment);
+        if (investment > 0) {
+            totalDeposits = totalDeposits.add(investment);
+
+            _mintAnt(investment);
+            _handleReferral(_referral);
+            _updateSellPrice();
+
+            return true;
+        } else {
+            return false;
+        }
     }
 
 
     /**
-    * @dev Function to mint ANT from fiat.
-    * @param _currency Address of the currency that will be used to mint ANT.
-    * @param _tokenCount The amount of tokens to pay for minting.
-    * @param _referral Address of the referral.
-    * @return A boolean that indicates if the operation was successful.
-    */
+     * @notice Function to mint ANT from fiat.
+     * @param _currency Address of the currency that will be used to mint ANT.
+     * @param _tokenCount The amount of tokens to pay for minting.
+     * @param _referral Address of the referral.
+     * @return A boolean that indicates if the operation was successful.
+     */
     function fundFromFiat(address _currency, uint _tokenCount, address _referral) public returns (bool) {
 
     }
 
 
+    /**
+     * @notice 
+     * @param 
+     * @return 
+     */
     function withdrawToEth(uint tokenCount) public returns (bool) {
         if (balances[msg.sender] >= tokenCount) {
             uint withdrawal = tokenCount.mul(priceSell).div(1 ether).mul(getCurrencyPrice(AEURAddress)).div(1 ether);
@@ -342,11 +487,21 @@ contract ANT is MintableToken, Payable {
     }
 
 
+    /**
+     * @notice 
+     * @param 
+     * @return 
+     */
     function withdrawToFiat() public returns (bool) {
         return true;
     }
 
 
+    /**
+     * @notice 
+     * @param 
+     * @return 
+     */
     function createFiatFromEth(address _currency) public payable returns (bool) {
         Currency c;
         uint amount;
@@ -362,11 +517,21 @@ contract ANT is MintableToken, Payable {
     }
 
 
+    /**
+     * @notice 
+     * @param 
+     * @return 
+     */
     function createFiatFromAnt(uint _tokenCount, address _referral) public returns (bool) {
 
     }
 
 
+    /**
+     * @notice 
+     * @param 
+     * @return 
+     */
     function destroyFiat(address _currency, uint _tokenCount) public returns (bool) {
         if (balances[msg.sender] >= _tokenCount) {
             Currency c;
@@ -384,16 +549,31 @@ contract ANT is MintableToken, Payable {
     }
 
 
+    /**
+     * @notice 
+     * @param 
+     * @return 
+     */
     function updateCurrencyPrice(address _currency, uint _price) public onlyOwner returns (bool) {
         prices[_currency] = _price;
     }
 
 
+    /**
+     * @notice 
+     * @param 
+     * @return 
+     */
     function getCurrencyPrice(address _currency) view public returns (uint) {
         return prices[_currency];
     }
 
 
+    /**
+     * @notice 
+     * @param 
+     * @return 
+     */
     function registerCurrency(address _currency, uint _price) public onlyOwner returns (bool) {
         for (uint i = 0; i < currencies.length; i++) {
             if (currencies[i] == _currency) {
@@ -408,6 +588,11 @@ contract ANT is MintableToken, Payable {
     }
 
 
+    /**
+     * @notice 
+     * @param 
+     * @return 
+     */
     function userExists(address user) view public returns (bool) {
         for (uint i = 0; i < users.length; i++) {
             if (users[i] == user) {
@@ -418,16 +603,31 @@ contract ANT is MintableToken, Payable {
     }
 
 
+    /**
+     * @notice 
+     * @param 
+     * @return 
+     */
     function usersCount() view public returns (uint) {
         return users.length;
     }
 
 
+    /**
+     * @notice 
+     * @param 
+     * @return 
+     */
     function close() public onlyOwner {
         selfdestruct(owner);
     }
 
 
+    /**
+     * @notice 
+     * @param 
+     * @return 
+     */
     function upgrade(address _newContract) public onlyOwner {
         ANT newAnt;
         newAnt = ANT(_newContract);
@@ -445,6 +645,11 @@ contract ANT is MintableToken, Payable {
     // ------------------------------------------------------------------------
 
 
+    /**
+     * @notice 
+     * @param 
+     * @return 
+     */
     function _mintAnt(uint _investment) private onlyOwner returns (bool) {
         uint investment = _investment;
         uint tokenCount = 0;
@@ -512,21 +717,41 @@ contract ANT is MintableToken, Payable {
     }
 
 
+    /**
+     * @notice 
+     * @param 
+     * @return 
+     */
     function _mintFiat() private onlyOwner returns (bool) {
         return true;
     }
 
 
+    /**
+     * @notice 
+     * @param 
+     * @return 
+     */
     function _destroyAnt() private onlyOwner returns (bool) {
         return true;
     }
 
 
+    /**
+     * @notice 
+     * @param 
+     * @return 
+     */
     function _destroyFiat() private onlyOwner returns (bool) {
         return true;
     }
 
 
+    /**
+     * @notice 
+     * @param 
+     * @return 
+     */
     function _updateSellPrice() private onlyOwner {
         if (switched) {
             priceSell = priceBuy.mul(95).div(100);
@@ -540,6 +765,11 @@ contract ANT is MintableToken, Payable {
     }
 
 
+    /**
+     * @notice 
+     * @param 
+     * @return 
+     */
     function _handleReferral(address _referral) private onlyOwner {
         if (_referral != address(0) && _referral != msg.sender) {
             balances[_referral] = balances[_referral].add(tokenCount.div(5));
@@ -552,6 +782,11 @@ contract ANT is MintableToken, Payable {
     }
 
 
+    /**
+     * @notice 
+     * @param 
+     * @return 
+     */
     function _transferCurrencyOwnership(address _currency, address _newOwner) private onlyOwner {
         Currency c;
         c = Currency(_currency);
@@ -560,9 +795,9 @@ contract ANT is MintableToken, Payable {
     }
 
 
-    // ------------------------------------------------------------------------
-    // Constructor
-    // ------------------------------------------------------------------------
+    /**
+     * @notice ANT constructor.
+     */
     function ANT() public payable {
         symbol = "ANT";
         name = "Anote";
