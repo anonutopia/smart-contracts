@@ -6,6 +6,7 @@ TODO
 
  - premine
  - test everything
+ - test if everything works ok with crypto fiats with less decimal places
  - security audit
  - advance upgrade
 
@@ -18,3 +19,4 @@ DONE
  * antToFiat
  * fiatToAnt
  * fiatToFiat
+ * remove unnecessary functions

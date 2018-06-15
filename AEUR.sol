@@ -189,6 +189,7 @@ contract ERC20 is ERC20Interface, Owned {
     }
 }
 
+
 /**
  * @title Mintable ERC20 token contract.
  */

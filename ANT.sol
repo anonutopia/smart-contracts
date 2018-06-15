@@ -226,6 +226,15 @@ contract Currency {
 
 
 /**
+ * @title For accessing crypto fiat contracts.
+ */
+contract NewAnt {
+    function registerCurrency(address, uint) public pure {}
+}
+
+
+
+/**
  * @title Payable smart contract - can receive ETH.
  */
 contract Payable {
@@ -273,7 +282,7 @@ contract MintableToken is ERC20 {
      * @param _amount The amount of tokens to mint.
      * @return A boolean that indicates if the operation was successful.
      */
-    function mint(address _to, uint256 _amount) hasMintPermission public returns (bool) {
+    function mint(address _to, uint256 _amount) hasMintPermission private returns (bool) {
         _totalSupply = _totalSupply.add(_amount);
         balances[_to] = balances[_to].add(_amount);
         emit Mint(_to, _amount);
@@ -288,7 +297,7 @@ contract MintableToken is ERC20 {
      * @param _amount The amount of tokens to destroy.
      * @return A boolean that indicates if the operation was successful.
      */
-    function destroy(address _from, uint256 _amount) hasMintPermission public returns (bool) {
+    function destroy(address _from, uint256 _amount) hasMintPermission private returns (bool) {
         if (balances[_from] >= _amount) {
             _totalSupply = _totalSupply.sub(_amount);
             balances[_from] = balances[_from].sub(_amount);
@@ -407,13 +416,13 @@ contract ANT is MintableToken, Payable {
     /**
      * @notice AEUR crypt fiat contract address.
      */
-    address constant AEURAddress = 0xc85C11976Df43eAb7b5C4F23D8De747320E03b2E;
+    address constant AEURAddress = 0xFd7730626C3301C996308DB8820F189B9f138084;
 
 
     /**
      * @notice Variable used to make some functions state-changing.
      */
-    bool transfered = false;
+    bool changestate = false;
 
 
     /**
@@ -538,19 +547,18 @@ contract ANT is MintableToken, Payable {
      * @notice Function to mint ANT from fiat.
      * @param _currency Address of the currency that will be used to mint ANT.
      * @param _tokenCount The amount of tokens to pay for minting.
-     * @param _referral Address of the referral.
      * @return A boolean that indicates if the operation was successful.
      */
     function fiatToAnt(address _currency, uint _tokenCount) public returns (bool) {
         Currency c = Currency(_currency);
 
         if (c.destroy(msg.sender, _tokenCount)) {
-            uint investment = tokenCount.mul(getCurrencyPrice(_currency)).div(getCurrencyPrice(AEURAddress));
+            uint investment = _tokenCount.mul(getCurrencyPrice(_currency)).div(getCurrencyPrice(AEURAddress));
 
             if (investment > 0) {
                 totalDeposits = totalDeposits.add(investment);
 
-                uint tokenCount = _mintAnt(investment);
+                _mintAnt(investment);
                 _updateSellPrice();
 
                 return true;
@@ -561,6 +569,7 @@ contract ANT is MintableToken, Payable {
             return false;
         }
     }
+
 
     /**
      * @notice Function to exchange crypto fiat for another crypto fiat.
@@ -573,9 +582,10 @@ contract ANT is MintableToken, Payable {
         Currency cf = Currency(_currencyFrom);
 
         if (cf.destroy(msg.sender, _tokenCount)) {
+            Currency ct = Currency(_currencyTo);
             uint amount = _tokenCount.mul(getCurrencyPrice(_currencyFrom)).div(getCurrencyPrice(_currencyTo));
-
             ct.mint(msg.sender, amount);
+            changestate = true;
 
             return true;
         } else {
@@ -661,8 +671,7 @@ contract ANT is MintableToken, Payable {
      * @param _newContract New contract address.
      */
     function upgrade(address _newContract) public onlyOwner {
-        ANT newAnt;
-        newAnt = ANT(_newContract);
+        NewAnt newAnt = NewAnt(_newContract);
 
         for (uint i = 0; i < currencies.length; i++) {
             _transferCurrencyOwnership(currencies[i], _newContract);
@@ -786,11 +795,11 @@ contract ANT is MintableToken, Payable {
      * @param _currency Address of the fiat currency contract.
      * @param _newOwner New owner's address.
      */
-    function _transferCurrencyOwnership(address _currency, address _newOwner) private onlyOwner {
+    function _transferCurrencyOwnership(address _currency, address _newOwner) public onlyOwner {
         Currency c;
         c = Currency(_currency);
         c.transferOwnership(_newOwner);
-        transfered = true;
+        changestate = true;
     }
 
 
