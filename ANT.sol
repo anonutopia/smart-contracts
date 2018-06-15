@@ -570,7 +570,17 @@ contract ANT is MintableToken, Payable {
      * @return A boolean that indicates if the operation was successful.
      */
     function fiatToFiat(address _currencyFrom, address _currencyTo, uint _tokenCount) public returns (bool) {
+        Currency cf = Currency(_currencyFrom);
 
+        if (cf.destroy(msg.sender, _tokenCount)) {
+            uint amount = _tokenCount.mul(getCurrencyPrice(_currencyFrom)).div(getCurrencyPrice(_currencyTo));
+
+            ct.mint(msg.sender, amount);
+
+            return true;
+        } else {
+            return false;
+        }
     }
 
 

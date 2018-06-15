@@ -1,6 +1,5 @@
 TODO
 
- - fiatToFiat
  - send ether to ant holders on fund
  - spreads
  - anote price drops
@@ -18,3 +17,4 @@ DONE
  * basic upgrading
  * antToFiat
  * fiatToAnt
+ * fiatToFiat
