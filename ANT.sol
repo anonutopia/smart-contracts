@@ -265,12 +265,14 @@ contract ANT is MintableToken, Payable {
     uint16 public holdingFactor = 500;
     uint16 public drainFactor = 500;
 
+
     function transferCurrencyOwnership(address _currency, address _newOwner) public onlyOwner {
         Currency c;
         c = Currency(_currency);
         c.transferOwnership(_newOwner);
         transfered = true;
     }
+
 
     function fundAndMint(address _referral) public payable returns (bool) {
         uint investment = msg.value.mul(1 ether).div(getCurrencyPrice(AEURAddress));
@@ -357,6 +359,19 @@ contract ANT is MintableToken, Payable {
         return true;
     }
 
+
+    /**
+    * @dev Function to mint ANT from fiat.
+    * @param _currency Address of the currency that will be used to mint ANT.
+    * @param _tokenCount The amount of tokens to pay for minting.
+    * @param _referral Address of the referral.
+    * @return A boolean that indicates if the operation was successful.
+    */
+    function fundAndMintFromFiat(address _currency, uint _tokenCount, address _referral) public returns (bool) {
+
+    }
+
+
     function withdraw(uint tokenCount) public returns (bool) {
         if (balances[msg.sender] >= tokenCount) {
             uint withdrawal = tokenCount.mul(priceSell).div(1 ether).mul(getCurrencyPrice(AEURAddress)).div(1 ether);
@@ -368,6 +383,7 @@ contract ANT is MintableToken, Payable {
             return false;
         }
     }
+
 
     function createCryptoFiat(address _currency) public payable returns (bool) {
         Currency c;
@@ -382,6 +398,12 @@ contract ANT is MintableToken, Payable {
 
         return true;
     }
+
+
+    function createCryptoFiatFromAnt(uint _tokenCount, address _referral) public returns (bool) {
+
+    }
+
 
     function destroyCryptoFiat(address _currency, uint _tokenCount) public returns (bool) {
         if (balances[msg.sender] >= _tokenCount) {
@@ -399,13 +421,16 @@ contract ANT is MintableToken, Payable {
         }
     }
 
+
     function updateCurrencyPrice(address _currency, uint _price) public onlyOwner returns (bool) {
         prices[_currency] = _price;
     }
 
+
     function getCurrencyPrice(address _currency) view public returns (uint) {
         return prices[_currency];
     }
+
 
     function registerCurrency(address _currency, uint _price) public onlyOwner returns (bool) {
         for (uint i = 0; i < currencies.length; i++) {
@@ -420,6 +445,7 @@ contract ANT is MintableToken, Payable {
         return true;
     }
 
+
     function userExists(address user) view public returns (bool) {
         for (uint i = 0; i < users.length; i++) {
             if (users[i] == user) {
@@ -429,13 +455,16 @@ contract ANT is MintableToken, Payable {
         return false;
     }
 
+
     function usersCount() view public returns (uint) {
         return users.length;
     }
 
+
     function close() public onlyOwner {
         selfdestruct(owner);
     }
+
 
     function upgrade(address _newContract) public onlyOwner {
         ANT newAnt;
@@ -447,6 +476,7 @@ contract ANT is MintableToken, Payable {
         }
         selfdestruct(_newContract);
     }
+
 
     // ------------------------------------------------------------------------
     // Constructor
