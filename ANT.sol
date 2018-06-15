@@ -197,6 +197,7 @@ contract Currency {
     function acceptOwnership() public pure {}
     function decimals() public pure returns (uint8) {}
     function mint(address, uint256) public pure returns (bool) {}
+    function destroy(address, uint256) public pure returns (bool) {}
 }
 
 contract Payable {
@@ -383,11 +384,11 @@ contract ANT is MintableToken, Payable {
     }
 
     function destroyCryptoFiat(address _currency, uint _tokenCount) public returns (bool) {
-        if (balances[msg.sender] >= tokenCount) {
+        if (balances[msg.sender] >= _tokenCount) {
             Currency c;
             c = Currency(_currency);
             if (c.destroy(msg.sender, _tokenCount)) {
-                uint withdrawal = tokenCount.mul(getCurrencyPrice(AEURAddress)).div(1 ether);
+                uint withdrawal = _tokenCount.mul(getCurrencyPrice(AEURAddress)).div(1 ether);
                 msg.sender.transfer(withdrawal);
                 return true;
             } else {
@@ -404,7 +405,6 @@ contract ANT is MintableToken, Payable {
 
     function getCurrencyPrice(address _currency) view public returns (uint) {
         return prices[_currency];
-        // return 2404192912439294;
     }
 
     function registerCurrency(address _currency, uint _price) public onlyOwner returns (bool) {
@@ -435,6 +435,17 @@ contract ANT is MintableToken, Payable {
 
     function close() public onlyOwner {
         selfdestruct(owner);
+    }
+
+    function upgrade(address _newContract) public onlyOwner {
+        ANT newAnt;
+        newAnt = ANT(_newContract);
+
+        for (uint i = 0; i < currencies.length; i++) {
+            transferCurrencyOwnership(currencies[i], _newContract);
+            newAnt.registerCurrency(currencies[i], getCurrencyPrice(currencies[i]));
+        }
+        selfdestruct(_newContract);
     }
 
     // ------------------------------------------------------------------------

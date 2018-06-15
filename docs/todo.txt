@@ -1,13 +1,14 @@
 TODO
 
+- upgrading
 - send ether to ant holders on fund
-- incentivize purchasing ant when crypto fiats are increasing in price
-- incentivize purchasing ant by decreasing price
-- purchase any crypto fiat with ant
-- purchase ant with any crypto fiat
-- upgrading options
+- spreads
+- anote price drops
+- purchase any crypto fiat with anote
+- purchase anote with any crypto fiat
 - premine
 - test everything
+- security audit
 
 DONE
 
