@@ -7,24 +7,48 @@ pragma solidity ^0.4.21;
  */
 library SafeMath {
 
+    /**
+     * @notice Sums two numbers.
+     * @param a Number to add to.
+     * @param b Number to add.
+     * @return Returns the sum of two numbers.
+     */
     function add(uint a, uint b) internal pure returns (uint c) {
         c = a + b;
         require(c >= a);
     }
 
 
+    /**
+     * @notice Subtracts two numbers.
+     * @param a Number to subtract from.
+     * @param b Number to subtract.
+     * @return Returns the subtraction of two numbers.
+     */
     function sub(uint a, uint b) internal pure returns (uint c) {
         require(b <= a);
         c = a - b;
     }
 
 
+    /**
+     * @notice Multiplies two numbers.
+     * @param a Number to multiply.
+     * @param b Number to multiply by.
+     * @return Returns the multiplication of two numbers.
+     */
     function mul(uint a, uint b) internal pure returns (uint c) {
         c = a * b;
         require(a == 0 || c / a == b);
     }
 
 
+    /**
+     * @notice Divides two numbers.
+     * @param a Number to divide.
+     * @param b Number to divide by.
+     * @return Returns the division of two numbers.
+     */
     function div(uint a, uint b) internal pure returns (uint c) {
         require(b > 0);
         c = a / b;
@@ -68,25 +92,41 @@ contract ApproveAndCallFallBack {
  */
 contract Owned {
 
-    address public owner;
-
-
+    /**
+     * @notice Smart ccontract events.
+     */
     event OwnershipTransferred(address indexed _from, address indexed _to);
 
 
-    function Owned() public {
-        owner = msg.sender;
-    }
+    /**
+     * @notice Address of the owner.
+     */
+    address public owner;
 
 
+    /**
+     * @notice Makes sure that only owner can call the function.
+     */
     modifier onlyOwner {
         require(msg.sender == owner);
         _;
     }
 
 
+    /**
+     * @notice Transfers token ownership.
+     * @param _newOwner Address of the new token owner.
+     */
     function transferOwnership(address _newOwner) public onlyOwner {
         owner = _newOwner;
+    }
+
+
+    /**
+     * @notice Smart contract contstructor.
+     */
+    function Owned() public {
+        owner = msg.sender;
     }
 }
 
