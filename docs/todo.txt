@@ -4,6 +4,8 @@ TODO
  - spreads
  - anote price drops
 
+ - add all comments
+ - check coding style
  - premine
  - test everything
  - test if everything works ok with crypto fiats with less decimal places
@@ -20,3 +22,4 @@ DONE
  * fiatToAnt
  * fiatToFiat
  * remove unnecessary functions
+ * fix upgrade

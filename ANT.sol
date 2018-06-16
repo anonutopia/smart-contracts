@@ -226,15 +226,6 @@ contract Currency {
 
 
 /**
- * @title For accessing crypto fiat contracts.
- */
-contract NewAnt {
-    function registerCurrency(address, uint) public pure {}
-}
-
-
-
-/**
  * @title Payable smart contract - can receive ETH.
  */
 contract Payable {
@@ -282,7 +273,7 @@ contract MintableToken is ERC20 {
      * @param _amount The amount of tokens to mint.
      * @return A boolean that indicates if the operation was successful.
      */
-    function mint(address _to, uint256 _amount) hasMintPermission private returns (bool) {
+    function mint(address _to, uint256 _amount) hasMintPermission internal returns (bool) {
         _totalSupply = _totalSupply.add(_amount);
         balances[_to] = balances[_to].add(_amount);
         emit Mint(_to, _amount);
@@ -297,7 +288,7 @@ contract MintableToken is ERC20 {
      * @param _amount The amount of tokens to destroy.
      * @return A boolean that indicates if the operation was successful.
      */
-    function destroy(address _from, uint256 _amount) hasMintPermission private returns (bool) {
+    function destroy(address _from, uint256 _amount) hasMintPermission internal returns (bool) {
         if (balances[_from] >= _amount) {
             _totalSupply = _totalSupply.sub(_amount);
             balances[_from] = balances[_from].sub(_amount);
@@ -396,15 +387,15 @@ contract ANT is MintableToken, Payable {
 
 
     /**
-     * @notice Crypto fiat prices.
+     * @notice Crypto fiat currencies.
      */
-    mapping(address => uint) prices;
+    address[] public currencies;
 
 
     /**
-     * @notice Crypto fiat currencies.
+     * @notice Crypto fiat prices.
      */
-    address[] currencies;
+    mapping(address => uint) prices;
 
 
     /**
@@ -416,7 +407,7 @@ contract ANT is MintableToken, Payable {
     /**
      * @notice AEUR crypt fiat contract address.
      */
-    address constant AEURAddress = 0xFd7730626C3301C996308DB8820F189B9f138084;
+    address constant AEURAddress = 0x2A36Dcd51FFB617eD6ba28Fcd8d9dA881B8D7a93;
 
 
     /**
@@ -615,6 +606,25 @@ contract ANT is MintableToken, Payable {
 
 
     /**
+     * @notice Returns number of crypto fiat currencies.
+     * @return Number of crypto fiat currencies.
+     */
+    function currenciesCount() view public returns (uint) {
+        return currencies.length;
+    }
+
+
+    /**
+     * @notice Returns fiat currency contract address.
+     * @param _position Crypto fiat currency index.
+     * @return Fiat crypto currency contract address.
+     */
+    function getCurrencyAddress(uint _position) view public returns (address) {
+        return currencies[_position];
+    }
+
+
+    /**
      * @notice Registers new fiat currency in ANT contract. 
      * @param _currency Crypto fiat currency address.
      * @param _price Crypto fiat currency price in ETH.
@@ -668,16 +678,19 @@ contract ANT is MintableToken, Payable {
 
     /**
      * @notice Upgrades ANT contract to new version.
-     * @param _newContract New contract address.
+     * @param _oldContract Old contract address.
      */
-    function upgrade(address _newContract) public onlyOwner {
-        NewAnt newAnt = NewAnt(_newContract);
+    function upgrade(address _oldContract) public onlyOwner {
+        ANT oldAnt = ANT(_oldContract);
+        uint cc = oldAnt.currenciesCount();
 
-        for (uint i = 0; i < currencies.length; i++) {
-            _transferCurrencyOwnership(currencies[i], _newContract);
-            newAnt.registerCurrency(currencies[i], getCurrencyPrice(currencies[i]));
+        for (uint i = 0; i < cc; i++) {
+            address currency = oldAnt.getCurrencyAddress(i);
+            oldAnt._transferCurrencyOwnership(currency, this);
+            registerCurrency(currency, oldAnt.getCurrencyPrice(currency));
         }
-        selfdestruct(_newContract);
+
+        oldAnt.close();
     }
 
 
