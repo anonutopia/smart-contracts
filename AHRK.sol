@@ -257,7 +257,7 @@ contract AHRK is MintableToken {
     // ------------------------------------------------------------------------
     function AHRK() public {
         symbol = "AHRK";
-        name = "Kripto Kuna";
+        name = "CryptoKuna";
         decimals = 18;
     }
 }

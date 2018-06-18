@@ -255,7 +255,7 @@ contract AEUR is MintableToken {
     // ------------------------------------------------------------------------
     function AEUR() public {
         symbol = "AEUR";
-        name = "Crypto Euro";
+        name = "CryptoEuro";
         decimals = 18;
     }
 }

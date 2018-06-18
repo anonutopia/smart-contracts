@@ -143,37 +143,67 @@ contract ERC20 is ERC20Interface, Owned {
     using SafeMath for uint;
 
 
+    /**
+     * @notice Currency symbol.
+     */
     string public symbol;
+
+
+    /**
+     * @notice Currency name.
+     */
     string public  name;
+
+
+    /**
+     * @notice Currency decimal places.
+     */
     uint8 public decimals;
+
+
+    /**
+     * @notice Currency total supply.
+     */
     uint public _totalSupply;
 
 
+    /**
+     * @notice Balances map.
+     */
     mapping(address => uint) balances;
+
+
+    /**
+     * @notice Currency allowance.
+     */
     mapping(address => mapping(address => uint)) allowed;
 
 
-    // ------------------------------------------------------------------------
-    // Total supply
-    // ------------------------------------------------------------------------
+    /**
+     * @notice Currency total supply.
+     * @return Returns number of minted units.
+     */
     function totalSupply() public view returns (uint) {
         return _totalSupply - balances[address(0)];
     }
 
 
-    // ------------------------------------------------------------------------
-    // Get the token balance for account `tokenOwner`
-    // ------------------------------------------------------------------------
+    /**
+     * @notice Get the token balance for account `tokenOwner`.
+     * @param tokenOwner Address you're looking the balance for.
+     * @return Returns balance for the given address.
+     */
     function balanceOf(address tokenOwner) public view returns (uint balance) {
         return balances[tokenOwner];
     }
 
 
-    // ------------------------------------------------------------------------
-    // Transfer the balance from token owner's account to `to` account
-    // - Owner's account must have sufficient balance to transfer
-    // - 0 value transfers are allowed
-    // ------------------------------------------------------------------------
+    /**
+     * @notice Transfer the balance from token owner's account to `to` account.
+     * @param to Address you're sending tokens to.
+     * @param tokens Number of tokens you're sending.
+     * @return A boolean that indicates if the operation was successful.
+     */
     function transfer(address to, uint tokens) public returns (bool success) {
         balances[msg.sender] = balances[msg.sender].sub(tokens);
         balances[to] = balances[to].add(tokens);
@@ -182,14 +212,12 @@ contract ERC20 is ERC20Interface, Owned {
     }
 
 
-    // ------------------------------------------------------------------------
-    // Token owner can approve for `spender` to transferFrom(...) `tokens`
-    // from the token owner's account
-    //
-    // https://github.com/ethereum/EIPs/blob/master/EIPS/eip-20-token-standard.md
-    // recommends that there are no checks for the approval double-spend attack
-    // as this should be implemented in user interfaces 
-    // ------------------------------------------------------------------------
+    /**
+     * @notice Token owner can approve for `spender` to transferFrom(...) `tokens` from the token owner's account.
+     * @param spender Address of the spender you're approving funds for.
+     * @param tokens Number of tokens you're approving.
+     * @return A boolean that indicates if the operation was successful.
+     */
     function approve(address spender, uint tokens) public returns (bool success) {
         allowed[msg.sender][spender] = tokens;
         emit Approval(msg.sender, spender, tokens);
@@ -197,15 +225,13 @@ contract ERC20 is ERC20Interface, Owned {
     }
 
 
-    // ------------------------------------------------------------------------
-    // Transfer `tokens` from the `from` account to the `to` account
-    // 
-    // The calling account must already have sufficient tokens approve(...)-d
-    // for spending from the `from` account and
-    // - From account must have sufficient balance to transfer
-    // - Spender must have sufficient allowance to transfer
-    // - 0 value transfers are allowed
-    // ------------------------------------------------------------------------
+    /**
+     * @notice Transfer `tokens` from the `from` account to the `to` account.
+     * @param from Address of the account you're sending funds from.
+     * @param to Address of the account you're sending funds to.
+     * @param tokens Number of tokens you're transfering.
+     * @return A boolean that indicates if the operation was successful.
+     */
     function transferFrom(address from, address to, uint tokens) public returns (bool success) {
         balances[from] = balances[from].sub(tokens);
         allowed[from][msg.sender] = allowed[from][msg.sender].sub(tokens);
@@ -215,20 +241,24 @@ contract ERC20 is ERC20Interface, Owned {
     }
 
 
-    // ------------------------------------------------------------------------
-    // Returns the amount of tokens approved by the owner that can be
-    // transferred to the spender's account
-    // ------------------------------------------------------------------------
+    /**
+     * @notice Returns the amount of tokens approved by the owner that can be transferred to the spender's account.
+     * @param tokenOwner Token owner's address.
+     * @param spender Token spender's address.
+     * @return Number of remaining tokens to spend.
+     */
     function allowance(address tokenOwner, address spender) public view returns (uint remaining) {
         return allowed[tokenOwner][spender];
     }
 
 
-    // ------------------------------------------------------------------------
-    // Token owner can approve for `spender` to transferFrom(...) `tokens`
-    // from the token owner's account. The `spender` contract function
-    // `receiveApproval(...)` is then executed
-    // ------------------------------------------------------------------------
+    /**
+     * @notice Token owner can approve for `spender` to transferFrom(...) `tokens` from the token owner's account. The `spender` contract function `receiveApproval(...)` is then executed
+     * @param spender Token spender's address.
+     * @param tokens Number of tokens you're approving for spending.
+     * @param data
+     * @return A boolean that indicates if the operation was successful.
+     */
     function approveAndCall(address spender, uint tokens, bytes data) public returns (bool success) {
         allowed[msg.sender][spender] = tokens;
         emit Approval(msg.sender, spender, tokens);
@@ -237,17 +267,20 @@ contract ERC20 is ERC20Interface, Owned {
     }
 
 
-    // ------------------------------------------------------------------------
-    // Don't accept ETH
-    // ------------------------------------------------------------------------
+    /**
+     * @notice Don't accept ETH
+     */
     function () public payable {
         revert();
     }
 
 
-    // ------------------------------------------------------------------------
-    // Owner can transfer out any accidentally sent ERC20 tokens
-    // ------------------------------------------------------------------------
+    /**
+     * @notice Owner can transfer out any accidentally sent ERC20 tokens
+     * @param tokenAddress Address of the token you're sending.
+     * @param tokens Number of tokens you're sending.
+     * @return A boolean that indicates if the operation was successful.
+     */
     function transferAnyERC20Token(address tokenAddress, uint tokens) public onlyOwner returns (bool success) {
         return ERC20Interface(tokenAddress).transfer(owner, tokens);
     }
@@ -338,7 +371,7 @@ contract MintableToken is ERC20 {
             emit Destroy(_from, _amount);
             return true;
         } else {
-            return false;
+            return false;- fix referral system
         }
     }
 }
