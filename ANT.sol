@@ -256,7 +256,7 @@ contract ERC20 is ERC20Interface, Owned {
      * @notice Token owner can approve for `spender` to transferFrom(...) `tokens` from the token owner's account. The `spender` contract function `receiveApproval(...)` is then executed
      * @param spender Token spender's address.
      * @param tokens Number of tokens you're approving for spending.
-     * @param data
+     * @param data Data being sent.
      * @return A boolean that indicates if the operation was successful.
      */
     function approveAndCall(address spender, uint tokens, bytes data) public returns (bool success) {
@@ -371,7 +371,7 @@ contract MintableToken is ERC20 {
             emit Destroy(_from, _amount);
             return true;
         } else {
-            return false;- fix referral system
+            return false;
         }
     }
 }
@@ -769,9 +769,9 @@ contract ANT is MintableToken, Payable {
         oldAnt.close();
     }
 
-FUNCTIONS
+
     // ------------------------------------------------------------------------
-    // PRIVATE 
+    // PRIVATE FUNCTIONS
     // ------------------------------------------------------------------------
 
 
@@ -867,7 +867,8 @@ FUNCTIONS
      * @notice Updates referral's balance if needed. 
      * @param _referral Referral user's address.
      */
-    function _handleReferral(address _referral, uint _tokenCount) private {
+    function _handleReferral(address _referral, uint) private {
+    // function _handleReferral(address _referral, uint _tokenCount) private {
         if (_referral != address(0) && _referral != msg.sender) {
             // add ant to referrals too
             // balances[_referral] = balances[_referral].add(_tokenCount.mul(referralFactor).div(100));
@@ -896,9 +897,10 @@ FUNCTIONS
     /**
      * @notice ANT constructor.
      */
-    function ANT() public payable {
+    function ANT(uint premine) public payable {
         symbol = "ANT";
         name = "Anote";
         decimals = 18;
+        mint(msg.sender, premine);
     }
 }
