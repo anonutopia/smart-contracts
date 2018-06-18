@@ -1,6 +1,5 @@
 TODO
 
- - fix referral system
  - send ether to ant holders on fund
  - spreads
  - anote price drops
@@ -24,3 +23,4 @@ DONE
  * remove unnecessary functions
  * fix upgrade
  * finish all comments
+ * fix referral system

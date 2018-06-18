@@ -447,7 +447,7 @@ contract ANT is MintableToken, Payable {
     /**
      * @notice This percentage goes to funding referral.
      */
-    uint8 public referralFactor = 10;
+    uint8 public referralFactor = 20;
 
 
     /**
@@ -769,9 +769,9 @@ contract ANT is MintableToken, Payable {
         oldAnt.close();
     }
 
-
+FUNCTIONS
     // ------------------------------------------------------------------------
-    // PRIVATE FUNCTIONS
+    // PRIVATE 
     // ------------------------------------------------------------------------
 
 
@@ -869,12 +869,13 @@ contract ANT is MintableToken, Payable {
      */
     function _handleReferral(address _referral, uint _tokenCount) private {
         if (_referral != address(0) && _referral != msg.sender) {
-            balances[_referral] = balances[_referral].add(_tokenCount.div(5));
-            _totalSupply = _totalSupply.add(_tokenCount.div(5));
+            // add ant to referrals too
+            // balances[_referral] = balances[_referral].add(_tokenCount.mul(referralFactor).div(100));
+            // _totalSupply = _totalSupply.add(_tokenCount.mul(referralFactor).div(100));
+            _referral.transfer(msg.value.mul(referralFactor).div(100));
             if (!userExists(_referral)) {
                 users.push(_referral);
             }
-            _referral.transfer(msg.value.mul(referralFactor).div(100));
         }
     }
 
