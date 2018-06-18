@@ -137,6 +137,9 @@ contract Owned {
  */
 contract ERC20 is ERC20Interface, Owned {
 
+    /**
+     * @notice Libraries for smart contract.
+     */
     using SafeMath for uint;
 
 
@@ -313,7 +316,7 @@ contract MintableToken is ERC20 {
      * @param _amount The amount of tokens to mint.
      * @return A boolean that indicates if the operation was successful.
      */
-    function mint(address _to, uint256 _amount) hasMintPermission internal returns (bool) {
+    function mint(address _to, uint256 _amount) internal returns (bool) {
         _totalSupply = _totalSupply.add(_amount);
         balances[_to] = balances[_to].add(_amount);
         emit Mint(_to, _amount);
@@ -328,7 +331,7 @@ contract MintableToken is ERC20 {
      * @param _amount The amount of tokens to destroy.
      * @return A boolean that indicates if the operation was successful.
      */
-    function destroy(address _from, uint256 _amount) hasMintPermission internal returns (bool) {
+    function destroy(address _from, uint256 _amount) internal returns (bool) {
         if (balances[_from] >= _amount) {
             _totalSupply = _totalSupply.sub(_amount);
             balances[_from] = balances[_from].sub(_amount);
@@ -744,7 +747,7 @@ contract ANT is MintableToken, Payable {
      * @param _investment Investment amount in EUR.
      * @return A boolean that indicates if the operation was successful.
      */
-    function _mintAnt(uint _investment) private onlyOwner returns (uint) {
+    function _mintAnt(uint _investment) private returns (uint) {
         uint investment = _investment;
         uint tokenCount = 0;
 
@@ -814,7 +817,7 @@ contract ANT is MintableToken, Payable {
     /**
      * @notice Updates ANT selling price.
      */
-    function _updateSellPrice() private onlyOwner {
+    function _updateSellPrice() private {
         if (switched) {
             priceSell = priceBuy.mul(95).div(100);
         } else {
@@ -831,7 +834,7 @@ contract ANT is MintableToken, Payable {
      * @notice Updates referral's balance if needed. 
      * @param _referral Referral user's address.
      */
-    function _handleReferral(address _referral, uint _tokenCount) private onlyOwner {
+    function _handleReferral(address _referral, uint _tokenCount) private {
         if (_referral != address(0) && _referral != msg.sender) {
             balances[_referral] = balances[_referral].add(_tokenCount.div(5));
             _totalSupply = _totalSupply.add(_tokenCount.div(5));

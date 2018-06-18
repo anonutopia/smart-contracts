@@ -3,6 +3,7 @@ TODO
  - send ether to ant holders on fund
  - spreads
  - anote price drops
+ - fix referral system
 
  - add all comments
  - check coding style
