@@ -481,12 +481,6 @@ contract ANT is MintableToken, Payable {
 
 
     /**
-     * @notice Anote holders balance.
-     */
-    uint public holderBalance;
-
-
-    /**
      * @notice Crypto fiat prices.
      */
     mapping(address => uint) prices;
@@ -511,21 +505,9 @@ contract ANT is MintableToken, Payable {
 
 
     /**
-     * @notice Tier counter for increasing price.
+     * @notice Tier counter.
      */
-    uint tierCounterPrice = 0;
-
-
-    /**
-     * @notice Tier counter for decreasing holding factor.
-     */
-    uint tierCounterHolding = 0;
-
-
-    /**
-     * @notice Tier counter for decreasing backup factor.
-     */
-    uint tierCounterDrain = 0;
+    uint tierCounter = 0;
 
 
     // ------------------------------------------------------------------------
@@ -835,16 +817,20 @@ contract ANT is MintableToken, Payable {
                 
                 tierSupply = tierSupplyHolder;
                 priceBuy = priceBuy.add(priceStep);
+
+                tierCounter++;
+
+                _updatePriceStep();
+                _updateDrainFactor();
+                _updateHoldingFactor();
+
+                if (tierCounter == 1000) {
+                    tierCounter = 0;
+                }
             } else {
                 investment = 0;
                 tierSupply = tierSupply.sub(tierTokenCount);
             }
-
-            _updatePriceStep(tierTokenCount);
-
-            _updateDrainFactor(tierTokenCount);
-
-            _updateHoldingFactor(tierTokenCount);
 
             tokenCount = tokenCount.add(tierTokenCount);
         }
@@ -865,13 +851,9 @@ contract ANT is MintableToken, Payable {
 
     /**
      * @notice Updates price step.
-     * @param tokenCount Number of tokens being created.
      */
-    function _updatePriceStep(uint tokenCount) private {
-        tierCounterPrice = tierCounterPrice.add(tokenCount);
-
-        if (priceStep > 100000000 wei && tierCounterPrice >= tierSupplyHolder.mul(1000)) {
-            tierCounterPrice = 0;
+    function _updatePriceStep() private {
+        if (priceStep > 100000000 wei && tierCounter == 1000) {
             priceStep /= 4;
             if (tierSupplyHolder > 100 ether) {
                 tierSupplyHolder /= 2;
@@ -882,13 +864,9 @@ contract ANT is MintableToken, Payable {
 
     /**
      * @notice Updates drain factor.
-     * @param tokenCount Number of tokens being created.
      */
-    function _updateDrainFactor(uint tokenCount) private {
-        tierCounterDrain = tierCounterDrain.add(tokenCount);
-
-        if (drainFactor > 10 && tierCounterDrain >= tierSupplyHolder.mul(10)) {
-            tierCounterDrain = 0;
+    function _updateDrainFactor() private {
+        if (drainFactor > 10 && tierCounter % 10 == 0) {
             drainFactor--;
         }
     }
@@ -896,14 +874,10 @@ contract ANT is MintableToken, Payable {
 
     /**
      * @notice Updates holding factor.
-     * @param tokenCount Number of tokens being created.
      */
-    function _updateHoldingFactor(uint tokenCount) private {
-        tierCounterHolding = tierCounterHolding.add(tokenCount);
-
+    function _updateHoldingFactor() private {
         if (switched) {
-            if (tierCounterHolding >= tierSupplyHolder.mul(100)) {
-                tierCounterHolding = 0;
+            if (tierCounter % 100 == 0) {
                 if (antBalance.mul(1 ether).div(getCurrencyPrice(AEURAddress)).div(priceSell.mul(100).div(_totalSupply)) < 10) {
                     holdingFactor++;
                 } else if (holdingFactor > 10) {
@@ -911,8 +885,7 @@ contract ANT is MintableToken, Payable {
                 }
             }
         } else {
-            if (holdingFactor > 105 && tierCounterHolding >= tierSupplyHolder.mul(100)) {
-                tierCounterHolding = 0;
+            if (holdingFactor > 105 && tierCounter % 100 == 0) {
                 holdingFactor--;
             }
         }
@@ -947,7 +920,7 @@ contract ANT is MintableToken, Payable {
         uint crowdfundingInvestment = investment.mul(crowdfundingFactor).div(100);
         uint referralInvestment = investment.mul(referralFactor).div(100);
         uint antInvestment = investment.mul(holdingFactor).div(1000);
-        uint holderInvestment = investment.sub(crowdfundingInvestment).sub(referralInvestment).sub(antInvestment);
+        // uint holderInvestment = investment.sub(crowdfundingInvestment).sub(referralInvestment).sub(antInvestment);
 
         owner.transfer(crowdfundingInvestment);
 
@@ -961,7 +934,7 @@ contract ANT is MintableToken, Payable {
         }
 
         antBalance = antBalance.add(antInvestment);
-        holderBalance = holderBalance.add(holderInvestment);
+        // holderBalance = holderBalance.add(holderInvestment);
     
         return eurInvestment;
     }
