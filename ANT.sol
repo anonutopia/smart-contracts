@@ -441,25 +441,25 @@ contract ANT is MintableToken, Payable {
     /**
      * @notice This percentage goes for crowdfunding.
      */
-    uint8 public crowdfundingFactor = 20;
+    uint public crowdfundingFactor = 20;
 
 
     /**
      * @notice This percentage goes to funding referral.
      */
-    uint8 public referralFactor = 20;
+    uint public referralFactor = 20;
 
 
     /**
      * @notice This percentage is being held in the contract.
      */
-    uint16 public holdingFactor = 500;
+    uint public holdingFactor = 500;
 
 
     /**
      * @notice This percentage of Anote has to be backuped up in EUR.
      */
-    uint16 public drainFactor = 500;
+    uint public drainFactor = 500;
 
 
     /**
@@ -481,6 +481,12 @@ contract ANT is MintableToken, Payable {
 
 
     /**
+     * @notice Tier counter.
+     */
+    uint public tierCounter = 0;
+
+
+    /**
      * @notice Crypto fiat prices.
      */
     mapping(address => uint) prices;
@@ -489,7 +495,7 @@ contract ANT is MintableToken, Payable {
     /**
      * @notice ANT users.
      */
-    address[] users;
+    // address[] users;
 
 
     /**
@@ -502,12 +508,6 @@ contract ANT is MintableToken, Payable {
      * @notice Variable used to make some functions state-changing.
      */
     bool changestate = false;
-
-
-    /**
-     * @notice Tier counter.
-     */
-    uint tierCounter = 0;
 
 
     // ------------------------------------------------------------------------
@@ -736,30 +736,31 @@ contract ANT is MintableToken, Payable {
      * @param _user Address of user to check.
      * @return A boolean that indicates if the users exists. 
      */
-    function userExists(address _user) view public returns (bool) {
-        for (uint i = 0; i < users.length; i++) {
-            if (users[i] == _user) {
-                return true;
-            }
-        }
-        return false;
-    }
+    // function userExists(address _user) view public returns (bool) {
+    //     for (uint i = 0; i < users.length; i++) {
+    //         if (users[i] == _user) {
+    //             return true;
+    //         }
+    //     }
+    //     return false;
+    // }
 
 
     /**
      * @notice Counts ANT users.
      * @return Count of ANT users.
      */
-    function usersCount() view public returns (uint) {
-        return users.length;
-    }
+    // function usersCount() view public returns (uint) {
+    //     return users.length;
+    // }
 
 
     /**
      * @notice Closes ANT contract passing ETH to the owner. 
      */
     function close() public onlyOwner {
-        selfdestruct(owner);
+        // selfdestruct(owner);
+        owner.transfer(address(this).balance);
     }
 
 
@@ -777,6 +778,21 @@ contract ANT is MintableToken, Payable {
             registerCurrency(currency, oldAnt.getCurrencyPrice(currency));
         }
 
+        _totalSupply = oldAnt._totalSupply();
+        switched = oldAnt.switched();
+        priceBuy = oldAnt.priceBuy();
+        priceSell = oldAnt.priceSell();
+        priceStep = oldAnt.priceStep();
+        totalDeposits = oldAnt.totalDeposits();
+        fundingsNumber = oldAnt.fundingsNumber();
+        tierSupplyHolder = oldAnt.tierSupplyHolder();
+        tierSupply = oldAnt.tierSupply();
+        holdingFactor = oldAnt.holdingFactor();
+        drainFactor = oldAnt.drainFactor();
+        antBalance = oldAnt.antBalance();
+        fiatBalance = oldAnt.fiatBalance();
+        tierCounter = oldAnt.tierCounter();
+
         oldAnt.close();
     }
 
@@ -793,6 +809,14 @@ contract ANT is MintableToken, Payable {
         changestate = true;
     }
 
+    /**
+     * @notice Pulls ANT balance from previous contract version.
+     */
+    function pullBalance(address _owner, address _oldContract) public {
+        ANT oldAnt = ANT(_oldContract);
+        balances[_owner] = oldAnt.balanceOf(_owner);
+    }
+
 
     // ------------------------------------------------------------------------
     // PRIVATE FUNCTIONS
@@ -807,38 +831,55 @@ contract ANT is MintableToken, Payable {
     function _mintAnt(uint _investment) private returns (uint) {
         uint investment = _investment;
         uint tokenCount = 0;
+        uint _drainFactor = drainFactor;
+        uint _holdingFactor = holdingFactor;
+        uint _tierSupply = tierSupply;
+        uint _priceBuy = priceBuy;
+        uint _priceStep = priceStep;
+        uint _tierSupplyHolder = tierSupplyHolder;
 
         while (investment > 0) {
-            uint tierTokenCount = investment.div(priceBuy).mul(1 ether);
+            uint tierTokenCount = investment.div(_priceBuy).mul(1 ether);
 
-            if (tierTokenCount >= tierSupply) {
-                tierTokenCount = tierSupply;
-                investment = investment.sub(tierTokenCount.div(1 ether).mul(priceBuy));
-                
-                tierSupply = tierSupplyHolder;
-                priceBuy = priceBuy.add(priceStep);
+            if (tierTokenCount >= _tierSupply) {
+                tierTokenCount = _tierSupply;
+            }
+
+            investment = investment.sub(tierTokenCount.div(1 ether).mul(_priceBuy));
+
+            if (tierTokenCount >= _tierSupply) {
+                _tierSupply = _tierSupplyHolder;
+                _priceBuy = _priceBuy.add(_priceStep);
 
                 tierCounter++;
 
-                _updatePriceStep();
-                _updateDrainFactor();
-                _updateHoldingFactor();
+                _tierSupplyHolder = _updateTierSupplyHolder(_tierSupplyHolder);
+                _priceStep = _updatePriceStep(_priceStep);
+                _drainFactor = _updateDrainFactor(_drainFactor);
+                _holdingFactor = _updateHoldingFactor(_holdingFactor);
 
                 if (tierCounter == 1000) {
                     tierCounter = 0;
                 }
             } else {
                 investment = 0;
-                tierSupply = tierSupply.sub(tierTokenCount);
+                _tierSupply = _tierSupply.sub(tierTokenCount);
             }
 
             tokenCount = tokenCount.add(tierTokenCount);
         }
 
+        drainFactor = _drainFactor;
+        holdingFactor = _holdingFactor;
+        tierSupply = _tierSupply;
+        priceBuy = _priceBuy;
+        priceStep = _priceStep;
+        tierSupplyHolder = _tierSupplyHolder;
+
         if (tokenCount > 0) {
-            if (!userExists(msg.sender)) {
-                users.push(msg.sender);
-            }
+            // if (!userExists(msg.sender)) {
+            //     users.push(msg.sender);
+            // }
 
             mint(msg.sender, tokenCount);
             
@@ -852,43 +893,58 @@ contract ANT is MintableToken, Payable {
     /**
      * @notice Updates price step.
      */
-    function _updatePriceStep() private {
-        if (priceStep > 100000000 wei && tierCounter == 1000) {
-            priceStep /= 4;
-            if (tierSupplyHolder > 100 ether) {
-                tierSupplyHolder /= 2;
-            }
+    function _updatePriceStep(uint _priceStep) private view returns (uint) {
+        uint ps = _priceStep;
+        if (ps > 100000000 wei && tierCounter == 1000) {
+            ps /= 4;
         }
+        return ps;
+    }
+
+
+    /**
+     * @notice Updates tier supply holder if needed.
+     */
+    function _updateTierSupplyHolder(uint _tierSupplyHolder) private view returns (uint) {
+        uint tsh = _tierSupplyHolder;
+        if (tierCounter == 1000 && tsh > 100 ether) {
+            tsh /= 2;
+        }
+        return tsh;
     }
 
 
     /**
      * @notice Updates drain factor.
      */
-    function _updateDrainFactor() private {
+    function _updateDrainFactor(uint _drainFactor) private view returns (uint) {
+        uint df = _drainFactor;
         if (drainFactor > 10 && tierCounter % 10 == 0) {
-            drainFactor--;
+            df--;
         }
+        return df;
     }
 
 
     /**
      * @notice Updates holding factor.
      */
-    function _updateHoldingFactor() private {
+    function _updateHoldingFactor(uint _holdingFactor) private view returns (uint) {
+        uint hf = _holdingFactor;
         if (switched) {
             if (tierCounter % 100 == 0) {
                 if (antBalance.mul(1 ether).div(getCurrencyPrice(AEURAddress)).div(priceSell.mul(100).div(_totalSupply)) < 10) {
-                    holdingFactor++;
-                } else if (holdingFactor > 10) {
-                    holdingFactor--;
+                    hf++;
+                } else if (_holdingFactor > 10) {
+                    hf--;
                 }
             }
         } else {
-            if (holdingFactor > 105 && tierCounter % 100 == 0) {
-                holdingFactor--;
+            if (_holdingFactor > 105 && tierCounter % 100 == 0) {
+                hf--;
             }
         }
+        return hf;
     }
 
 
@@ -926,9 +982,9 @@ contract ANT is MintableToken, Payable {
 
         if (_referral != address(0) && _referral != msg.sender) {
             _referral.transfer(referralInvestment);
-            if (!userExists(_referral)) {
-                users.push(_referral);
-            }
+            // if (!userExists(_referral)) {
+            //     users.push(_referral);
+            // }
         } else {
             antInvestment = antInvestment.add(referralInvestment);
         }

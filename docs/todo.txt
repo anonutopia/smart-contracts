@@ -1,14 +1,15 @@
 TODO
 
  - send ether to ant holders on fund
+ - price updating oracle
+
+ - optimize gas
  - spreads
  - anote price drops
-
  - check coding style
  - test everything
  - test if everything works ok with crypto fiats with less decimal places
  - security audit
- - advance upgrade
 
 DONE
 
@@ -24,3 +25,4 @@ DONE
  * finish all comments
  * fix referral system
  * premine
+ * advance upgrade
