@@ -486,6 +486,9 @@ contract ANT is MintableToken, Payable {
     uint public tierCounter = 0;
 
 
+    bool public decreaseHoldingFactor = true;
+
+
     /**
      * @notice Crypto fiat prices.
      */
@@ -501,7 +504,7 @@ contract ANT is MintableToken, Payable {
     /**
      * @notice AEUR crypt fiat contract address.
      */
-    address constant AEURAddress = 0x2F16c9545B6247743863C25b0565cbDB5f907ADa;
+    address constant AEURAddress = 0x4Ee1d9c593f60F64323be3818366FE25dfF67495;
 
 
     /**
@@ -811,6 +814,8 @@ contract ANT is MintableToken, Payable {
 
     /**
      * @notice Pulls ANT balance from previous contract version.
+     * @param _owner Owner of the address.
+     * @param _oldContract Address of the previous contract.
      */
     function pullBalance(address _owner, address _oldContract) public {
         ANT oldAnt = ANT(_oldContract);
@@ -831,12 +836,11 @@ contract ANT is MintableToken, Payable {
     function _mintAnt(uint _investment) private returns (uint) {
         uint investment = _investment;
         uint tokenCount = 0;
-        uint _drainFactor = drainFactor;
-        uint _holdingFactor = holdingFactor;
         uint _tierSupply = tierSupply;
         uint _priceBuy = priceBuy;
         uint _priceStep = priceStep;
         uint _tierSupplyHolder = tierSupplyHolder;
+        uint _tierCounter = tierCounter;
 
         while (investment > 0) {
             uint tierTokenCount = investment.div(_priceBuy).mul(1 ether);
@@ -851,16 +855,14 @@ contract ANT is MintableToken, Payable {
                 _tierSupply = _tierSupplyHolder;
                 _priceBuy = _priceBuy.add(_priceStep);
 
-                tierCounter++;
+                _tierCounter++;
 
-                _tierSupplyHolder = _updateTierSupplyHolder(_tierSupplyHolder);
-                _priceStep = _updatePriceStep(_priceStep);
-                _drainFactor = _updateDrainFactor(_drainFactor);
-                _holdingFactor = _updateHoldingFactor(_holdingFactor);
-
-                if (tierCounter == 1000) {
-                    tierCounter = 0;
+                _tierSupplyHolder = _updateTierSupplyHolder(_tierSupplyHolder, _tierCounter);
+                _priceStep = _updatePriceStep(_priceStep, _tierCounter);
+                if (!switched) {
+                    _updateDrainFactor(_tierCounter);
                 }
+                _updateHoldingFactor(_tierCounter);
             } else {
                 investment = 0;
                 _tierSupply = _tierSupply.sub(tierTokenCount);
@@ -869,12 +871,11 @@ contract ANT is MintableToken, Payable {
             tokenCount = tokenCount.add(tierTokenCount);
         }
 
-        drainFactor = _drainFactor;
-        holdingFactor = _holdingFactor;
         tierSupply = _tierSupply;
         priceBuy = _priceBuy;
         priceStep = _priceStep;
         tierSupplyHolder = _tierSupplyHolder;
+        tierCounter = _tierCounter;
 
         if (tokenCount > 0) {
             // if (!userExists(msg.sender)) {
@@ -893,9 +894,9 @@ contract ANT is MintableToken, Payable {
     /**
      * @notice Updates price step.
      */
-    function _updatePriceStep(uint _priceStep) private view returns (uint) {
+    function _updatePriceStep(uint _priceStep, uint _tierCounter) private pure returns (uint) {
         uint ps = _priceStep;
-        if (ps > 100000000 wei && tierCounter == 1000) {
+        if (ps > 100000000 wei && _tierCounter % 1000 == 0) {
             ps /= 4;
         }
         return ps;
@@ -905,9 +906,9 @@ contract ANT is MintableToken, Payable {
     /**
      * @notice Updates tier supply holder if needed.
      */
-    function _updateTierSupplyHolder(uint _tierSupplyHolder) private view returns (uint) {
+    function _updateTierSupplyHolder(uint _tierSupplyHolder, uint _tierCounter) private pure returns (uint) {
         uint tsh = _tierSupplyHolder;
-        if (tierCounter == 1000 && tsh > 100 ether) {
+        if (_tierCounter % 1000 == 0 && tsh > 100 ether) {
             tsh /= 2;
         }
         return tsh;
@@ -917,34 +918,45 @@ contract ANT is MintableToken, Payable {
     /**
      * @notice Updates drain factor.
      */
-    function _updateDrainFactor(uint _drainFactor) private view returns (uint) {
-        uint df = _drainFactor;
-        if (drainFactor > 10 && tierCounter % 10 == 0) {
+    function _updateDrainFactor(uint _tierCounter) private {
+        uint df = drainFactor;
+        if (drainFactor > 100 && _tierCounter % 10 == 0) {
             df--;
         }
-        return df;
+        drainFactor = df;
     }
 
 
     /**
      * @notice Updates holding factor.
      */
-    function _updateHoldingFactor(uint _holdingFactor) private view returns (uint) {
-        uint hf = _holdingFactor;
+    function _updateHoldingFactor(uint _tierCounter) private {
+        uint hf = holdingFactor;
+
         if (switched) {
-            if (tierCounter % 100 == 0) {
-                if (antBalance.mul(1 ether).div(getCurrencyPrice(AEURAddress)).div(priceSell.mul(100).div(_totalSupply)) < 10) {
+            if (_tierCounter % 100 == 0) {
+                if (!decreaseHoldingFactor) {
                     hf++;
-                } else if (_holdingFactor > 10) {
+                } else if (holdingFactor > 100) {
                     hf--;
                 }
             }
         } else {
-            if (_holdingFactor > 105 && tierCounter % 100 == 0) {
+            if (holdingFactor > 105 && _tierCounter % 100 == 0) {
                 hf--;
             }
         }
-        return hf;
+
+        holdingFactor = hf;
+    }
+
+
+    function _checkBackup() private {
+        if (antBalance.mul(1 ether).div(getCurrencyPrice(AEURAddress)).div(priceSell.mul(100).div(_totalSupply)) < 10) {
+            decreaseHoldingFactor = false;
+        } else {
+            decreaseHoldingFactor = true;
+        }
     }
 
 
