@@ -1035,6 +1035,7 @@ contract ANT is MintableToken, Payable {
      * @param _investment Investment amount.
      */
     function _splitInvestmentToHolders(uint _investment) private {
+        uint _inv = _investment;
         uint uc = usersCount();
         uint ts = _totalSupply.sub(balances[owner]);
         address user = address(0);
@@ -1042,10 +1043,16 @@ contract ANT is MintableToken, Payable {
         for (uint i = 0; i < uc; i++) {
             user = userGet(i);
             if (user != owner) {
-                // amount = balanceOf(user).div(ts);
                 amount = _investment.mul(balanceOf(user).mul(1 ether).div(ts)).div(1 ether);
-                balancesProfit[user] = balancesProfit[user].add(amount);
+                if (_inv >= amount) {
+                    _inv = _inv.sub(amount);
+                    balancesProfit[user] = balancesProfit[user].add(amount);
+                }
             }
+        }
+
+        if (_inv > 0) {
+            antBalance = antBalance.add(_inv);
         }
     }
 
