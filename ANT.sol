@@ -429,7 +429,7 @@ contract ANT is MintableToken, Payable {
     /**
      * @notice This holds tier supply.
      */
-    uint public tierSupplyHolder = 5000 ether;
+    uint public tierSupplyHolder = 10000 ether;
 
 
     /**
@@ -486,10 +486,16 @@ contract ANT is MintableToken, Payable {
     uint public tierCounter = 0;
 
 
-    /**
+    /**Earning
      * @notice Is holding factor increasing or decreasing.
      */
     bool public increaseHoldingFactor = false;
+
+
+    /**
+     * @notice Profit balances map.
+     */
+    mapping(address => uint) balancesProfit;
 
 
     /**
@@ -836,6 +842,25 @@ contract ANT is MintableToken, Payable {
     }
 
 
+    /**
+     * @notice Get the profit balance for account `tokenOwner`.
+     * @param _tokenOwner Address you're looking the balance for.
+     * @return Returns balance for the given address.
+     */
+    function balanceProfitOf(address _tokenOwner) public view returns (uint balance) {
+        return balancesProfit[_tokenOwner];
+    }
+
+
+    /**
+     * @notice Get the profit balance for account `tokenOwner`.
+     * @return Returns balance for the given address.
+     */
+    function withdrawProfit() public {
+        msg.sender.transfer(balancesProfit[msg.sender]);
+    }
+
+
     // ------------------------------------------------------------------------
     // PRIVATE FUNCTIONS
     // ------------------------------------------------------------------------
@@ -901,7 +926,7 @@ contract ANT is MintableToken, Payable {
      */
     function _updatePriceStep(uint _priceStep, uint _tierCounter) private pure returns (uint) {
         uint ps = _priceStep;
-        if (ps > 100000000000 wei && _tierCounter % 1000 == 0) {
+        if (ps > 1 szabo && _tierCounter % 1000 == 0) {
             ps /= 4;
         }
         return ps;
@@ -978,15 +1003,15 @@ contract ANT is MintableToken, Payable {
 
     /**
      * @notice Splits investment between appropriate funds.
-     * @param investment Investment amount.
+     * @param _investment Investment amount.
      * @param _referral Referral user's address.
      * @return Investment in Euro.
      */
-    function _splitInvestment(uint investment, address _referral) private returns (uint) {
-        uint eurInvestment = investment.mul(1 ether).div(getCurrencyPrice(getCurrencyAddress(0)));
-        uint crowdfundingInvestment = investment.mul(crowdfundingFactor).div(100);
-        uint referralInvestment = investment.mul(referralFactor).div(100);
-        uint antInvestment = investment.mul(holdingFactor).div(1000);
+    function _splitInvestment(uint _investment, address _referral) private returns (uint) {
+        uint eurInvestment = _investment.mul(1 ether).div(getCurrencyPrice(getCurrencyAddress(0)));
+        uint crowdfundingInvestment = _investment.mul(crowdfundingFactor).div(100);
+        uint referralInvestment = _investment.mul(referralFactor).div(100);
+        uint antInvestment = _investment.mul(holdingFactor).div(1000);
 
         owner.transfer(crowdfundingInvestment);
 
@@ -994,11 +1019,34 @@ contract ANT is MintableToken, Payable {
             _referral.transfer(referralInvestment);
         } else {
             antInvestment = antInvestment.add(referralInvestment);
+            referralInvestment = 0;
         }
 
         antBalance = antBalance.add(antInvestment);
+
+        _splitInvestmentToHolders(_investment.sub(antInvestment).sub(crowdfundingInvestment).sub(referralInvestment));
     
         return eurInvestment;
+    }
+
+
+    /**
+     * @notice Splits investment to holders.
+     * @param _investment Investment amount.
+     */
+    function _splitInvestmentToHolders(uint _investment) private {
+        uint uc = usersCount();
+        uint ts = _totalSupply.sub(balances[owner]);
+        address user = address(0);
+        uint amount = 0;
+        for (uint i = 0; i < uc; i++) {
+            user = userGet(i);
+            if (user != owner) {
+                // amount = balanceOf(user).div(ts);
+                amount = _investment.mul(balanceOf(user).mul(1 ether).div(ts)).div(1 ether);
+                balancesProfit[user] = balancesProfit[user].add(amount);
+            }
+        }
     }
 
 

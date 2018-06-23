@@ -1,6 +1,5 @@
 TODO
  
- - send ether to ant holders on fund
  - price updating oracle
  - wallet
 
@@ -30,5 +29,5 @@ DONE
  * remove hardcoded euro
  * optimize gas
  * upgrade balances too
- * fix updating selling price
- 
+ * fix selling price update
+ * send ether to ant holders on fund
