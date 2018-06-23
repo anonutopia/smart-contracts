@@ -396,22 +396,22 @@ contract ANT is MintableToken, Payable {
     bool public switched = false;
 
 
+        /**
+     * @notice Step for increasing Anote buy price.
+     */
+    uint public priceStep = 10000 szabo;
+
+
     /**
      * @notice Anote buy price in EUR.
      */
-    uint public priceBuy = 1000 szabo;
+    uint public priceBuy = priceStep;
 
 
     /**
      * @notice Anote sell price in EUR.
      */
     uint public priceSell = 0;
-
-
-    /**
-     * @notice Step for increasing Anote buy price.
-     */
-    uint public priceStep = 10000 szabo;
 
 
     /**
@@ -486,7 +486,10 @@ contract ANT is MintableToken, Payable {
     uint public tierCounter = 0;
 
 
-    bool public increaseHoldingFactor = true;
+    /**
+     * @notice Is holding factor increasing or decreasing.
+     */
+    bool public increaseHoldingFactor = false;
 
 
     /**
@@ -898,7 +901,7 @@ contract ANT is MintableToken, Payable {
      */
     function _updatePriceStep(uint _priceStep, uint _tierCounter) private pure returns (uint) {
         uint ps = _priceStep;
-        if (ps > 100000000 wei && _tierCounter % 1000 == 0) {
+        if (ps > 100000000000 wei && _tierCounter % 1000 == 0) {
             ps /= 4;
         }
         return ps;
