@@ -399,7 +399,7 @@ contract ANT is MintableToken, Payable {
     /**
      * @notice Anote buy price in EUR.
      */
-    uint public priceBuy = 100 szabo;
+    uint public priceBuy = 1000 szabo;
 
 
     /**
@@ -429,7 +429,7 @@ contract ANT is MintableToken, Payable {
     /**
      * @notice This holds tier supply.
      */
-    uint public tierSupplyHolder = 64000 ether;
+    uint public tierSupplyHolder = 5000 ether;
 
 
     /**
@@ -486,7 +486,7 @@ contract ANT is MintableToken, Payable {
     uint public tierCounter = 0;
 
 
-    bool public decreaseHoldingFactor = true;
+    bool public increaseHoldingFactor = true;
 
 
     /**
@@ -498,13 +498,7 @@ contract ANT is MintableToken, Payable {
     /**
      * @notice ANT users.
      */
-    // address[] users;
-
-
-    /**
-     * @notice AEUR crypt fiat contract address.
-     */
-    address constant AEURAddress = 0x4Ee1d9c593f60F64323be3818366FE25dfF67495;
+    address[] users;
 
 
     /**
@@ -565,7 +559,7 @@ contract ANT is MintableToken, Payable {
      */
     function antToEth(uint _tokenCount) public returns (bool) {
         if (destroy(msg.sender, _tokenCount)) {
-            uint withdrawal = _tokenCount.mul(priceSell).div(1 ether).mul(getCurrencyPrice(AEURAddress)).div(1 ether);
+            uint withdrawal = _tokenCount.mul(priceSell).div(1 ether).mul(getCurrencyPrice(getCurrencyAddress(0))).div(1 ether);
             msg.sender.transfer(withdrawal);
             return true;
         } else {
@@ -584,7 +578,7 @@ contract ANT is MintableToken, Payable {
         if (destroy(msg.sender, _tokenCount)) {
             Currency c = Currency(_currency);
             uint8 decimals = c.decimals();
-            uint withdrawal = _tokenCount.mul(priceSell).div(1 ether).mul(getCurrencyPrice(AEURAddress)).div(1 ether);
+            uint withdrawal = _tokenCount.mul(priceSell).div(1 ether).mul(getCurrencyPrice(getCurrencyAddress(0))).div(1 ether);
             uint amount = withdrawal.mul(uint(10)**decimals).div(getCurrencyPrice(_currency));
 
             uint ethWithdrawal = _tokenCount.mul(priceSell).div(1 ether);
@@ -629,7 +623,7 @@ contract ANT is MintableToken, Payable {
         Currency c = Currency(_currency);
 
         if (c.destroy(msg.sender, _tokenCount)) {
-            uint investment = _tokenCount.mul(getCurrencyPrice(_currency)).div(getCurrencyPrice(AEURAddress));
+            uint investment = _tokenCount.mul(getCurrencyPrice(_currency)).div(getCurrencyPrice(getCurrencyAddress(0)));
 
             if (investment > 0) {
                 totalDeposits = totalDeposits.add(investment);
@@ -739,31 +733,41 @@ contract ANT is MintableToken, Payable {
      * @param _user Address of user to check.
      * @return A boolean that indicates if the users exists. 
      */
-    // function userExists(address _user) view public returns (bool) {
-    //     for (uint i = 0; i < users.length; i++) {
-    //         if (users[i] == _user) {
-    //             return true;
-    //         }
-    //     }
-    //     return false;
-    // }
+    function userExists(address _user) view public returns (bool) {
+        for (uint i = 0; i < users.length; i++) {
+            if (users[i] == _user) {
+                return true;
+            }
+        }
+        return false;
+    }
 
 
     /**
      * @notice Counts ANT users.
      * @return Count of ANT users.
      */
-    // function usersCount() view public returns (uint) {
-    //     return users.length;
-    // }
+    function usersCount() view public returns (uint) {
+        return users.length;
+    }
+
+
+    /**
+     * @notice Returns address of the user.
+     * @param _index Index of the user.
+     * @return User's address.
+     */
+    function userGet(uint _index) view public returns (address) {
+        return users[_index];
+    }
 
 
     /**
      * @notice Closes ANT contract passing ETH to the owner. 
      */
     function close() public onlyOwner {
-        // selfdestruct(owner);
-        owner.transfer(address(this).balance);
+        selfdestruct(owner);
+        // owner.transfer(address(this).balance);
     }
 
 
@@ -774,11 +778,18 @@ contract ANT is MintableToken, Payable {
     function upgrade(address _oldContract) public onlyOwner {
         ANT oldAnt = ANT(_oldContract);
         uint cc = oldAnt.currenciesCount();
+        uint uc = oldAnt.usersCount();
 
         for (uint i = 0; i < cc; i++) {
             address currency = oldAnt.getCurrencyAddress(i);
             oldAnt.transferCurrencyOwnership(currency, this);
             registerCurrency(currency, oldAnt.getCurrencyPrice(currency));
+        }
+
+        for (i = 0; i < uc; i++) {
+            address user = oldAnt.userGet(i);
+            users.push(user);
+            balances[user] = oldAnt.balanceOf(user);
         }
 
         _totalSupply = oldAnt._totalSupply();
@@ -788,7 +799,6 @@ contract ANT is MintableToken, Payable {
         priceStep = oldAnt.priceStep();
         totalDeposits = oldAnt.totalDeposits();
         fundingsNumber = oldAnt.fundingsNumber();
-        tierSupplyHolder = oldAnt.tierSupplyHolder();
         tierSupply = oldAnt.tierSupply();
         holdingFactor = oldAnt.holdingFactor();
         drainFactor = oldAnt.drainFactor();
@@ -831,63 +841,55 @@ contract ANT is MintableToken, Payable {
     /**
      * @notice Mints new ANT tokens.
      * @param _investment Investment amount in EUR.
-     * @return A boolean that indicates if the operation was successful.
      */
-    function _mintAnt(uint _investment) private returns (uint) {
-        uint investment = _investment;
-        uint tokenCount = 0;
+    function _mintAnt(uint _investment) private {
+        uint _inv = _investment;
+        uint _tokenCount = 0;
         uint _tierSupply = tierSupply;
         uint _priceBuy = priceBuy;
         uint _priceStep = priceStep;
         uint _tierSupplyHolder = tierSupplyHolder;
         uint _tierCounter = tierCounter;
+        uint _tierInvestment = 0;
+        uint _drainFactor = drainFactor;
 
-        while (investment > 0) {
-            uint tierTokenCount = investment.div(_priceBuy).mul(1 ether);
+        while (_inv > 0) {
+            _tierInvestment = _inv;
 
-            if (tierTokenCount >= _tierSupply) {
-                tierTokenCount = _tierSupply;
-            }
-
-            investment = investment.sub(tierTokenCount.div(1 ether).mul(_priceBuy));
-
-            if (tierTokenCount >= _tierSupply) {
+            if (_tierInvestment >= _tierSupply) {
+                _tierInvestment = _tierSupply;            
+                _inv = _inv.sub(_tierInvestment);
                 _tierSupply = _tierSupplyHolder;
                 _priceBuy = _priceBuy.add(_priceStep);
 
                 _tierCounter++;
 
-                _tierSupplyHolder = _updateTierSupplyHolder(_tierSupplyHolder, _tierCounter);
                 _priceStep = _updatePriceStep(_priceStep, _tierCounter);
                 if (!switched) {
-                    _updateDrainFactor(_tierCounter);
+                    _drainFactor = _updateDrainFactor(_tierCounter, _drainFactor);
                 }
                 _updateHoldingFactor(_tierCounter);
             } else {
-                investment = 0;
-                _tierSupply = _tierSupply.sub(tierTokenCount);
+                _inv = 0;
+                _tierSupply = _tierSupply.sub(_tierInvestment);
             }
 
-            tokenCount = tokenCount.add(tierTokenCount);
+            _tokenCount = _tokenCount.add(_tierInvestment.mul(1 ether).div(_priceBuy));
         }
 
         tierSupply = _tierSupply;
         priceBuy = _priceBuy;
         priceStep = _priceStep;
-        tierSupplyHolder = _tierSupplyHolder;
         tierCounter = _tierCounter;
+        drainFactor = _drainFactor;
 
-        if (tokenCount > 0) {
-            // if (!userExists(msg.sender)) {
-            //     users.push(msg.sender);
-            // }
-
-            mint(msg.sender, tokenCount);
-            
+        if (_tokenCount > 0) {
+            mint(msg.sender, _tokenCount);
             fundingsNumber++;
+            if (!userExists(msg.sender)) {
+                users.push(msg.sender);
+            }
         }
-
-        return tokenCount;
     }
 
 
@@ -904,26 +906,14 @@ contract ANT is MintableToken, Payable {
 
 
     /**
-     * @notice Updates tier supply holder if needed.
-     */
-    function _updateTierSupplyHolder(uint _tierSupplyHolder, uint _tierCounter) private pure returns (uint) {
-        uint tsh = _tierSupplyHolder;
-        if (_tierCounter % 1000 == 0 && tsh > 100 ether) {
-            tsh /= 2;
-        }
-        return tsh;
-    }
-
-
-    /**
      * @notice Updates drain factor.
      */
-    function _updateDrainFactor(uint _tierCounter) private {
-        uint df = drainFactor;
-        if (drainFactor > 100 && _tierCounter % 10 == 0) {
+    function _updateDrainFactor(uint _tierCounter, uint _drainFactor) private pure returns (uint) {
+        uint df = _drainFactor;
+        if (df > 100 && _tierCounter % 10 == 0) {
             df--;
         }
-        drainFactor = df;
+        return df;
     }
 
 
@@ -933,17 +923,18 @@ contract ANT is MintableToken, Payable {
     function _updateHoldingFactor(uint _tierCounter) private {
         uint hf = holdingFactor;
 
-        if (switched) {
-            if (_tierCounter % 100 == 0) {
-                if (!decreaseHoldingFactor) {
+        if (_tierCounter % 100 == 0) {
+            if (switched) {
+                // if (antBalance.mul(1 ether).div(getCurrencyPrice(getCurrencyAddress(0))).div(priceSell.mul(100).div(_totalSupply)) < 10) {
+                if (increaseHoldingFactor) {
                     hf++;
                 } else if (holdingFactor > 100) {
                     hf--;
                 }
-            }
-        } else {
-            if (holdingFactor > 105 && _tierCounter % 100 == 0) {
-                hf--;
+            } else {
+                if (holdingFactor > 105) {
+                    hf--;
+                }
             }
         }
 
@@ -951,11 +942,14 @@ contract ANT is MintableToken, Payable {
     }
 
 
+    /**
+     * @notice Checks if holding factor should be increased for backup purposes.
+     */
     function _checkBackup() private {
-        if (antBalance.mul(1 ether).div(getCurrencyPrice(AEURAddress)).div(priceSell.mul(100).div(_totalSupply)) < 10) {
-            decreaseHoldingFactor = false;
+        if (antBalance.mul(1 ether).div(getCurrencyPrice(getCurrencyAddress(0))).div(priceSell.mul(100).div(_totalSupply)) < 10) {
+            increaseHoldingFactor = false;
         } else {
-            decreaseHoldingFactor = true;
+            increaseHoldingFactor = true;
         }
     }
 
@@ -967,10 +961,13 @@ contract ANT is MintableToken, Payable {
         if (switched) {
             priceSell = priceBuy.mul(95).div(100);
         } else {
-            priceSell = antBalance.mul(1 ether).div(getCurrencyPrice(AEURAddress)).mul(1 ether).div(_totalSupply).mul(1000).div(drainFactor);
+            priceSell = antBalance.mul(1 ether).div(getCurrencyPrice(getCurrencyAddress(0))).mul(1 ether).div(_totalSupply).mul(1000).div(drainFactor);
 
-            if (priceSell.mul(100).div(priceBuy) > 95 && _totalSupply > 64000 ether) {
-                switched = true;
+            if (priceSell.mul(100).div(priceBuy) > 95) {
+                priceSell = priceBuy.mul(95).div(100);
+                if (totalDeposits > 100000 ether) {
+                    switched = true;
+                }
             }
         }
     }
@@ -983,26 +980,20 @@ contract ANT is MintableToken, Payable {
      * @return Investment in Euro.
      */
     function _splitInvestment(uint investment, address _referral) private returns (uint) {
-        uint eurInvestment = investment.mul(1 ether).div(getCurrencyPrice(AEURAddress));
-
+        uint eurInvestment = investment.mul(1 ether).div(getCurrencyPrice(getCurrencyAddress(0)));
         uint crowdfundingInvestment = investment.mul(crowdfundingFactor).div(100);
         uint referralInvestment = investment.mul(referralFactor).div(100);
         uint antInvestment = investment.mul(holdingFactor).div(1000);
-        // uint holderInvestment = investment.sub(crowdfundingInvestment).sub(referralInvestment).sub(antInvestment);
 
         owner.transfer(crowdfundingInvestment);
 
         if (_referral != address(0) && _referral != msg.sender) {
             _referral.transfer(referralInvestment);
-            // if (!userExists(_referral)) {
-            //     users.push(_referral);
-            // }
         } else {
             antInvestment = antInvestment.add(referralInvestment);
         }
 
         antBalance = antBalance.add(antInvestment);
-        // holderBalance = holderBalance.add(holderInvestment);
     
         return eurInvestment;
     }
@@ -1011,10 +1002,10 @@ contract ANT is MintableToken, Payable {
     /**
      * @notice ANT constructor.
      */
-    function ANT(uint premine) public payable {
+    function ANT(uint _initialBalance) public payable {
         symbol = "ANT";
         name = "Anote";
         decimals = 18;
-        mint(msg.sender, premine);
+        mint(msg.sender, _initialBalance);
     }
 }
