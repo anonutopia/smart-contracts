@@ -1,11 +1,9 @@
 TODO
  
- - upgrade balances too
  - send ether to ant holders on fund
  - price updating oracle
  - wallet
 
- - optimize gas
  - spreads
  - anote price drops
  - check coding style
@@ -30,3 +28,5 @@ DONE
  * premine
  * advance upgrade
  * remove hardcoded euro
+ * optimize gas
+ * upgrade balances too

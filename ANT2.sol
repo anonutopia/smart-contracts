@@ -498,7 +498,7 @@ contract ANT is MintableToken, Payable {
     /**
      * @notice ANT users.
      */
-    // address[] users;
+    address[] users;
 
 
     /**
@@ -733,31 +733,41 @@ contract ANT is MintableToken, Payable {
      * @param _user Address of user to check.
      * @return A boolean that indicates if the users exists. 
      */
-    // function userExists(address _user) view public returns (bool) {
-    //     for (uint i = 0; i < users.length; i++) {
-    //         if (users[i] == _user) {
-    //             return true;
-    //         }
-    //     }
-    //     return false;
-    // }
+    function userExists(address _user) view public returns (bool) {
+        for (uint i = 0; i < users.length; i++) {
+            if (users[i] == _user) {
+                return true;
+            }
+        }
+        return false;
+    }
 
 
     /**
      * @notice Counts ANT users.
      * @return Count of ANT users.
      */
-    // function usersCount() view public returns (uint) {
-    //     return users.length;
-    // }
+    function usersCount() view public returns (uint) {
+        return users.length;
+    }
+
+
+    /**
+     * @notice Returns address of the user.
+     * @param _index Index of the user.
+     * @return User's address.
+     */
+    function userGet(uint _index) view public returns (address) {
+        return users[_index];
+    }
 
 
     /**
      * @notice Closes ANT contract passing ETH to the owner. 
      */
     function close() public onlyOwner {
-        // selfdestruct(owner);
-        owner.transfer(address(this).balance);
+        selfdestruct(owner);
+        // owner.transfer(address(this).balance);
     }
 
 
@@ -768,11 +778,18 @@ contract ANT is MintableToken, Payable {
     function upgrade(address _oldContract) public onlyOwner {
         ANT oldAnt = ANT(_oldContract);
         uint cc = oldAnt.currenciesCount();
+        uint uc = oldAnt.usersCount();
 
         for (uint i = 0; i < cc; i++) {
             address currency = oldAnt.getCurrencyAddress(i);
             oldAnt.transferCurrencyOwnership(currency, this);
             registerCurrency(currency, oldAnt.getCurrencyPrice(currency));
+        }
+
+        for (i = 0; i < uc; i++) {
+            address user = oldAnt.userGet(i);
+            users.push(user);
+            balances[user] = oldAnt.balanceOf(user);
         }
 
         _totalSupply = oldAnt._totalSupply();
@@ -870,6 +887,9 @@ contract ANT is MintableToken, Payable {
         if (_tokenCount > 0) {
             mint(msg.sender, _tokenCount);
             fundingsNumber++;
+            if (!userExists(msg.sender)) {
+                users.push(msg.sender);
+            }
         }
     }
 
@@ -923,6 +943,9 @@ contract ANT is MintableToken, Payable {
     }
 
 
+    /**
+     * @notice Checks if holding factor should be increased for backup purposes.
+     */
     function _checkBackup() private {
         if (antBalance.mul(1 ether).div(getCurrencyPrice(getCurrencyAddress(0))).div(priceSell.mul(100).div(_totalSupply)) < 10) {
             increaseHoldingFactor = false;
@@ -978,10 +1001,10 @@ contract ANT is MintableToken, Payable {
     /**
      * @notice ANT constructor.
      */
-    function ANT(uint premine) public payable {
+    function ANT(uint _initialBalance) public payable {
         symbol = "ANT";
         name = "Anote";
         decimals = 18;
-        mint(msg.sender, premine);
+        mint(msg.sender, _initialBalance);
     }
 }
