@@ -1,5 +1,6 @@
 TODO
  
+ - better upgrade process
  - price updating oracle
  - wallet
 
@@ -31,3 +32,4 @@ DONE
  * upgrade balances too
  * fix selling price update
  * send ether to ant holders on fund
+ * fiat comments
