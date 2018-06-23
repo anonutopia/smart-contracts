@@ -30,3 +30,5 @@ DONE
  * remove hardcoded euro
  * optimize gas
  * upgrade balances too
+ * fix updating selling price
+ 

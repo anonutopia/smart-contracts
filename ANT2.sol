@@ -799,7 +799,6 @@ contract ANT is MintableToken, Payable {
         priceStep = oldAnt.priceStep();
         totalDeposits = oldAnt.totalDeposits();
         fundingsNumber = oldAnt.fundingsNumber();
-        // tierSupplyHolder = oldAnt.tierSupplyHolder();
         tierSupply = oldAnt.tierSupply();
         holdingFactor = oldAnt.holdingFactor();
         drainFactor = oldAnt.drainFactor();
@@ -964,9 +963,11 @@ contract ANT is MintableToken, Payable {
         } else {
             priceSell = antBalance.mul(1 ether).div(getCurrencyPrice(getCurrencyAddress(0))).mul(1 ether).div(_totalSupply).mul(1000).div(drainFactor);
 
-            if (priceSell.mul(100).div(priceBuy) > 95 && totalDeposits > 100000 ether) {
-                switched = true;
+            if (priceSell.mul(100).div(priceBuy) > 95) {
                 priceSell = priceBuy.mul(95).div(100);
+                if (totalDeposits > 100000 ether) {
+                    switched = true;
+                }
             }
         }
     }
