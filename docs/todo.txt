@@ -1,6 +1,8 @@
 TODO
  
+ - add ANT interface to the repo
  - better upgrade process
+ - readme
  - price updating oracle
  - wallet
 

@@ -781,10 +781,10 @@ contract ANT is MintableToken, Payable {
 
 
     /**
-     * @notice Upgrades ANT contract to new version.
+     * @notice Prepares ANT contract for upgrade to this version.
      * @param _oldContract Old contract address.
      */
-    function upgrade(address _oldContract) public onlyOwner {
+    function prepareForUpgrade(address _oldContract) public onlyOwner {
         ANT oldAnt = ANT(_oldContract);
         uint cc = oldAnt.currenciesCount();
         uint uc = oldAnt.usersCount();
@@ -814,8 +814,17 @@ contract ANT is MintableToken, Payable {
         antBalance = oldAnt.antBalance();
         fiatBalance = oldAnt.fiatBalance();
         tierCounter = oldAnt.tierCounter();
+    }
 
-        oldAnt.close();
+
+    /**
+     * @notice Upgrades ANT contract to new version.
+     * @param _oldContract Old contract address.
+     */
+    function upgrade(address _oldContract) public onlyOwner {
+
+
+        // oldAnt.close();
     }
 
 
@@ -953,7 +962,6 @@ contract ANT is MintableToken, Payable {
 
         if (_tierCounter % 100 == 0) {
             if (switched) {
-                // if (antBalance.mul(1 ether).div(getCurrencyPrice(getCurrencyAddress(0))).div(priceSell.mul(100).div(_totalSupply)) < 10) {
                 if (increaseHoldingFactor) {
                     hf++;
                 } else if (holdingFactor > 100) {
