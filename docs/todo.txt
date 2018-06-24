@@ -1,8 +1,6 @@
 TODO
  
- - add ANT interface to the repo
  - better upgrade process
- - readme
  - price updating oracle
  - wallet
 
@@ -35,3 +33,5 @@ DONE
  * fix selling price update
  * send ether to ant holders on fund
  * fiat comments
+ * add ANT interface to the repo
+ * readme
