@@ -107,7 +107,7 @@ contract Owned {
     /**
      * @notice Makes sure that only owner can call the function.
      */
-    modifier onlyOwner {
+    modifier _onlyOwner {
         require(msg.sender == owner);
         _;
     }
@@ -117,7 +117,7 @@ contract Owned {
      * @notice Transfers token ownership.
      * @param _newOwner Address of the new token owner.
      */
-    function transferOwnership(address _newOwner) public onlyOwner {
+    function transferOwnership(address _newOwner) public _onlyOwner {
         owner = _newOwner;
     }
 
@@ -281,7 +281,7 @@ contract ERC20 is ERC20Interface, Owned {
      * @param tokens Number of tokens you're sending.
      * @return A boolean that indicates if the operation was successful.
      */
-    function transferAnyERC20Token(address tokenAddress, uint tokens) public onlyOwner returns (bool success) {
+    function transferAnyERC20Token(address tokenAddress, uint tokens) public _onlyOwner returns (bool success) {
         return ERC20Interface(tokenAddress).transfer(owner, tokens);
     }
 }
@@ -332,15 +332,6 @@ contract MintableToken is ERC20 {
      */
     event Mint(address indexed to, uint256 amount);
     event Destroy(address indexed from, uint256 amount);
-
-
-    /**
-     * @notice Checks if caller has mint permissions.
-     */
-    modifier hasMintPermission() {
-        require(msg.sender == owner);
-        _;
-    }
 
 
     /**
@@ -544,7 +535,7 @@ contract ANT is MintableToken, Payable {
      * @param _referral Address of the referral user.
      * @return A boolean that indicates if the operation was successful.
      */
-    function ethToAnt(address _referral) public payable notUpgrading returns (bool) {
+    function ethToAnt(address _referral) public payable _notUpgrading returns (bool) {
         uint investment = _splitInvestment(msg.value, _referral);
         
         if (investment > 0) {
@@ -566,7 +557,7 @@ contract ANT is MintableToken, Payable {
      * @param _currency Address of the fiat currency contract.
      * @return A boolean that indicates if the operation was successful.
      */
-    function ethToFiat(address _currency) public payable notUpgrading returns (bool) {
+    function ethToFiat(address _currency) public payable _notUpgrading returns (bool) {
         fiatBalance = fiatBalance.add(msg.value);
 
         Currency c = Currency(_currency);
@@ -584,7 +575,7 @@ contract ANT is MintableToken, Payable {
      * @param _tokenCount Number of ANT tokens to exchange for ETH.
      * @return A boolean that indicates if the operation was successful.
      */
-    function antToEth(uint _tokenCount) public notUpgrading returns (bool) {
+    function antToEth(uint _tokenCount) public _notUpgrading returns (bool) {
         if (destroy(msg.sender, _tokenCount)) {
             uint withdrawal = _tokenCount.mul(priceSell).div(1 ether).mul(getCurrencyPrice(getCurrencyAddress(0))).div(1 ether);
             msg.sender.transfer(withdrawal);
@@ -601,7 +592,7 @@ contract ANT is MintableToken, Payable {
      * @param _tokenCount Number of ANT tokens to exchange for crypto fiat.
      * @return A boolean that indicates if the operation was successful.
      */
-    function antToFiat(address _currency, uint _tokenCount) public notUpgrading returns (bool) {
+    function antToFiat(address _currency, uint _tokenCount) public _notUpgrading returns (bool) {
         if (destroy(msg.sender, _tokenCount)) {
             Currency c = Currency(_currency);
             uint8 decimals = c.decimals();
@@ -627,7 +618,7 @@ contract ANT is MintableToken, Payable {
      * @param _tokenCount Number of crypto fiat tokens being exchanged for ETH.
      * @return A boolean that indicates if the operation was successful.
      */
-    function fiatToEth(address _currency, uint _tokenCount) public notUpgrading returns (bool) {
+    function fiatToEth(address _currency, uint _tokenCount) public _notUpgrading returns (bool) {
         Currency c = Currency(_currency);
 
         if (c.destroy(msg.sender, _tokenCount)) {
@@ -646,7 +637,7 @@ contract ANT is MintableToken, Payable {
      * @param _tokenCount The amount of tokens to pay for minting.
      * @return A boolean that indicates if the operation was successful.
      */
-    function fiatToAnt(address _currency, uint _tokenCount) public notUpgrading returns (bool) {
+    function fiatToAnt(address _currency, uint _tokenCount) public _notUpgrading returns (bool) {
         Currency c = Currency(_currency);
 
         if (c.destroy(msg.sender, _tokenCount)) {
@@ -680,7 +671,7 @@ contract ANT is MintableToken, Payable {
      * @param _tokenCount The amount of tokens you have to exchange.
      * @return A boolean that indicates if the operation was successful.
      */
-    function fiatToFiat(address _currencyFrom, address _currencyTo, uint _tokenCount) public notUpgrading returns (bool) {
+    function fiatToFiat(address _currencyFrom, address _currencyTo, uint _tokenCount) public _notUpgrading returns (bool) {
         Currency cf = Currency(_currencyFrom);
 
         if (cf.destroy(msg.sender, _tokenCount)) {
@@ -701,7 +692,7 @@ contract ANT is MintableToken, Payable {
      * @param _currency Crypto fiat currency address.
      * @param _price Crypto fiat currency price in ETH.
      */
-    function updateCurrencyPrice(address _currency, uint _price) public onlyOwner notUpgrading {
+    function updateCurrencyPrice(address _currency, uint _price) public _onlyOwner _notUpgrading {
         prices[_currency] = _price;
     }
 
@@ -741,7 +732,7 @@ contract ANT is MintableToken, Payable {
      * @param _price Crypto fiat currency price in ETH.
      * @return A boolean that indicates if the operation was successful. 
      */
-    function registerCurrency(address _currency, uint _price) public onlyOwner returns (bool) {
+    function registerCurrency(address _currency, uint _price) public _onlyOwner returns (bool) {
         for (uint i = 0; i < currencies.length; i++) {
             if (currencies[i] == _currency) {
                 return false;
@@ -793,7 +784,7 @@ contract ANT is MintableToken, Payable {
      * @notice Closes ANT contract passing ETH to some address. 
      * @param _destination Destination for the ETH to get moved to.
      */
-    function close(address _destination) public onlyOwner {
+    function close(address _destination) public _onlyOwner {
         if (_destination != address(0)) {
             selfdestruct(_destination);
         } else if (newContract != address(0)) {
@@ -806,7 +797,7 @@ contract ANT is MintableToken, Payable {
      * @notice Prepares ANT contract for upgrade to this version.
      * @param _newContract Old contract address.
      */
-    function lockForUpgrade(address _newContract) public onlyOwner {
+    function lockForUpgrade(address _newContract) public _onlyOwner {
         newContract = _newContract;
         upgrading = true;
     }
@@ -815,7 +806,7 @@ contract ANT is MintableToken, Payable {
     /**
      * @notice Finishes upgrade process by sending ETH to the new contract address and destroying the contract.
      */
-    function finishUpgrade() public hasUpgradePermissions {
+    function finishUpgrade() public _hasUpgradePermissions {
         selfdestruct(newContract);
     }
 
@@ -824,7 +815,7 @@ contract ANT is MintableToken, Payable {
      * @notice Upgrades ANT contract to new version.
      * @param _oldContract Old contract address.
      */
-    function upgrade(address _oldContract, bool _closeOld) public onlyOwner {
+    function upgrade(address _oldContract, bool _closeOld) public _onlyOwner {
         ANT oldAnt = ANT(_oldContract);
         uint cc = oldAnt.currenciesCount();
         uint uc = oldAnt.usersCount();
@@ -869,7 +860,7 @@ contract ANT is MintableToken, Payable {
      * @param _currency Address of the fiat currency contract.
      * @param _newOwner New owner's address.
      */
-    function transferCurrencyOwnership(address _currency, address _newOwner) public hasUpgradePermissions {
+    function transferCurrencyOwnership(address _currency, address _newOwner) public _hasUpgradePermissions {
         Currency c;
         c = Currency(_currency);
         c.transferOwnership(_newOwner);
@@ -901,7 +892,7 @@ contract ANT is MintableToken, Payable {
      * @notice Get the profit balance for account `tokenOwner`.
      * @return Returns balance for the given address.
      */
-    function withdrawProfit() public notUpgrading {
+    function withdrawProfit() public _notUpgrading {
         msg.sender.transfer(balancesProfit[msg.sender]);
     }
 
@@ -1104,7 +1095,7 @@ contract ANT is MintableToken, Payable {
     /**
      * @notice Checks if caller has upgrade permissions.
      */
-    modifier hasUpgradePermissions() {
+    modifier _hasUpgradePermissions() {
         require(msg.sender == newContract);
         _;
     }
@@ -1113,7 +1104,7 @@ contract ANT is MintableToken, Payable {
     /**
      * @notice Checks if contract is being upgraded.
      */
-    modifier notUpgrading() {
+    modifier _notUpgrading() {
         require(!upgrading);
         _;
     }
