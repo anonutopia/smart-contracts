@@ -1,5 +1,6 @@
 TODO
  
+ - check if there are events missing
  - price updating oracle
  - wallet
 
@@ -10,6 +11,7 @@ TODO
  - test if everything works ok with crypto fiats with less decimal places
  - security audit
  - calculate anote price depending on all crypto fiats
+ - anonutopia
 
 DONE
 
