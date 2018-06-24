@@ -794,7 +794,11 @@ contract ANT is MintableToken, Payable {
      * @param _destination Destination for the ETH to get moved to.
      */
     function close(address _destination) public onlyOwner {
-        selfdestruct(_destination);
+        if (_destination != address(0)) {
+            selfdestruct(_destination);
+        } else if (newContract != address(0)) {
+            selfdestruct(newContract);
+        }
     }
 
 
@@ -865,7 +869,7 @@ contract ANT is MintableToken, Payable {
      * @param _currency Address of the fiat currency contract.
      * @param _newOwner New owner's address.
      */
-    function transferCurrencyOwnership(address _currency, address _newOwner) public onlyOwner {
+    function transferCurrencyOwnership(address _currency, address _newOwner) public hasUpgradePermissions {
         Currency c;
         c = Currency(_currency);
         c.transferOwnership(_newOwner);
