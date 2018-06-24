@@ -7,6 +7,6 @@ Current ANT contract address: 0x48Fe654Ff9f0743DfEFFEb60b67F659C0b90F242
 ### Anonutopia's Smart Contracts
 
  * [ANOTE (ANT)](https://github.com/anonutopia/smart-contracts/blob/master/ANT.sol)
- * CryptoEuro (AEUR)
- * CryptoDollar (AUSD)
- * CryptoKuna (AHRK)
+ * [CryptoEuro (AEUR)](https://github.com/anonutopia/smart-contracts/blob/master/fiats/AEUR.sol)
+ * [CryptoDollar (AUSD)](https://github.com/anonutopia/smart-contracts/blob/master/fiats/AUSD.sol)
+ * [CryptoKuna (AHRK)](https://github.com/anonutopia/smart-contracts/blob/master/fiats/AHRK.sol)
