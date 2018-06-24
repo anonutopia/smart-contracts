@@ -486,10 +486,28 @@ contract ANT is MintableToken, Payable {
     uint public tierCounter = 0;
 
 
-    /**Earning
+    /**
      * @notice Is holding factor increasing or decreasing.
      */
     bool public increaseHoldingFactor = false;
+
+
+    /**
+     * @notice Address of the new contract version.
+     */
+    address public newContract = address(0);
+
+
+    /**
+     * @notice Address of the old contract version.
+     */
+    address public oldContract = address(0);
+
+
+    /**
+     * @notice Flag telling if contract is currently being upgraded.
+     */
+    bool public upgrading = false;
 
 
     /**
@@ -526,7 +544,7 @@ contract ANT is MintableToken, Payable {
      * @param _referral Address of the referral user.
      * @return A boolean that indicates if the operation was successful.
      */
-    function ethToAnt(address _referral) public payable returns (bool) {
+    function ethToAnt(address _referral) public payable notUpgrading returns (bool) {
         uint investment = _splitInvestment(msg.value, _referral);
         
         if (investment > 0) {
@@ -548,7 +566,7 @@ contract ANT is MintableToken, Payable {
      * @param _currency Address of the fiat currency contract.
      * @return A boolean that indicates if the operation was successful.
      */
-    function ethToFiat(address _currency) public payable returns (bool) {
+    function ethToFiat(address _currency) public payable notUpgrading returns (bool) {
         fiatBalance = fiatBalance.add(msg.value);
 
         Currency c = Currency(_currency);
@@ -566,7 +584,7 @@ contract ANT is MintableToken, Payable {
      * @param _tokenCount Number of ANT tokens to exchange for ETH.
      * @return A boolean that indicates if the operation was successful.
      */
-    function antToEth(uint _tokenCount) public returns (bool) {
+    function antToEth(uint _tokenCount) public notUpgrading returns (bool) {
         if (destroy(msg.sender, _tokenCount)) {
             uint withdrawal = _tokenCount.mul(priceSell).div(1 ether).mul(getCurrencyPrice(getCurrencyAddress(0))).div(1 ether);
             msg.sender.transfer(withdrawal);
@@ -583,7 +601,7 @@ contract ANT is MintableToken, Payable {
      * @param _tokenCount Number of ANT tokens to exchange for crypto fiat.
      * @return A boolean that indicates if the operation was successful.
      */
-    function antToFiat(address _currency, uint _tokenCount) public returns (bool) {
+    function antToFiat(address _currency, uint _tokenCount) public notUpgrading returns (bool) {
         if (destroy(msg.sender, _tokenCount)) {
             Currency c = Currency(_currency);
             uint8 decimals = c.decimals();
@@ -609,7 +627,7 @@ contract ANT is MintableToken, Payable {
      * @param _tokenCount Number of crypto fiat tokens being exchanged for ETH.
      * @return A boolean that indicates if the operation was successful.
      */
-    function fiatToEth(address _currency, uint _tokenCount) public returns (bool) {
+    function fiatToEth(address _currency, uint _tokenCount) public notUpgrading returns (bool) {
         Currency c = Currency(_currency);
 
         if (c.destroy(msg.sender, _tokenCount)) {
@@ -628,7 +646,7 @@ contract ANT is MintableToken, Payable {
      * @param _tokenCount The amount of tokens to pay for minting.
      * @return A boolean that indicates if the operation was successful.
      */
-    function fiatToAnt(address _currency, uint _tokenCount) public returns (bool) {
+    function fiatToAnt(address _currency, uint _tokenCount) public notUpgrading returns (bool) {
         Currency c = Currency(_currency);
 
         if (c.destroy(msg.sender, _tokenCount)) {
@@ -662,7 +680,7 @@ contract ANT is MintableToken, Payable {
      * @param _tokenCount The amount of tokens you have to exchange.
      * @return A boolean that indicates if the operation was successful.
      */
-    function fiatToFiat(address _currencyFrom, address _currencyTo, uint _tokenCount) public returns (bool) {
+    function fiatToFiat(address _currencyFrom, address _currencyTo, uint _tokenCount) public notUpgrading returns (bool) {
         Currency cf = Currency(_currencyFrom);
 
         if (cf.destroy(msg.sender, _tokenCount)) {
@@ -683,7 +701,7 @@ contract ANT is MintableToken, Payable {
      * @param _currency Crypto fiat currency address.
      * @param _price Crypto fiat currency price in ETH.
      */
-    function updateCurrencyPrice(address _currency, uint _price) public onlyOwner {
+    function updateCurrencyPrice(address _currency, uint _price) public onlyOwner notUpgrading {
         prices[_currency] = _price;
     }
 
@@ -772,19 +790,37 @@ contract ANT is MintableToken, Payable {
 
 
     /**
-     * @notice Closes ANT contract passing ETH to the owner. 
+     * @notice Closes ANT contract passing ETH to some address. 
+     * @param _destination Destination for the ETH to get moved to.
      */
-    function close() public onlyOwner {
-        selfdestruct(owner);
-        // owner.transfer(address(this).balance);
+    function close(address _destination) public onlyOwner {
+        selfdestruct(_destination);
     }
 
 
     /**
      * @notice Prepares ANT contract for upgrade to this version.
+     * @param _newContract Old contract address.
+     */
+    function lockForUpgrade(address _newContract) public onlyOwner {
+        newContract = _newContract;
+        upgrading = true;
+    }
+
+
+    /**
+     * @notice Finishes upgrade process by sending ETH to the new contract address and destroying the contract.
+     */
+    function finishUpgrade() public hasUpgradePermissions {
+        selfdestruct(newContract);
+    }
+
+
+    /**
+     * @notice Upgrades ANT contract to new version.
      * @param _oldContract Old contract address.
      */
-    function prepareForUpgrade(address _oldContract) public onlyOwner {
+    function upgrade(address _oldContract, bool _closeOld) public onlyOwner {
         ANT oldAnt = ANT(_oldContract);
         uint cc = oldAnt.currenciesCount();
         uint uc = oldAnt.usersCount();
@@ -799,6 +835,7 @@ contract ANT is MintableToken, Payable {
             address user = oldAnt.userGet(i);
             users.push(user);
             balances[user] = oldAnt.balanceOf(user);
+            balancesProfit[user] = oldAnt.balanceProfitOf(user);
         }
 
         _totalSupply = oldAnt._totalSupply();
@@ -814,17 +851,12 @@ contract ANT is MintableToken, Payable {
         antBalance = oldAnt.antBalance();
         fiatBalance = oldAnt.fiatBalance();
         tierCounter = oldAnt.tierCounter();
-    }
 
+        oldContract = _oldContract;
 
-    /**
-     * @notice Upgrades ANT contract to new version.
-     * @param _oldContract Old contract address.
-     */
-    function upgrade(address _oldContract) public onlyOwner {
-
-
-        // oldAnt.close();
+        if (_closeOld) {
+            oldAnt.finishUpgrade();
+        }
     }
 
 
@@ -865,7 +897,7 @@ contract ANT is MintableToken, Payable {
      * @notice Get the profit balance for account `tokenOwner`.
      * @return Returns balance for the given address.
      */
-    function withdrawProfit() public {
+    function withdrawProfit() public notUpgrading {
         msg.sender.transfer(balancesProfit[msg.sender]);
     }
 
@@ -1062,6 +1094,24 @@ contract ANT is MintableToken, Payable {
         if (_inv > 0) {
             antBalance = antBalance.add(_inv);
         }
+    }
+
+
+    /**
+     * @notice Checks if caller has upgrade permissions.
+     */
+    modifier hasUpgradePermissions() {
+        require(msg.sender == newContract);
+        _;
+    }
+
+
+    /**
+     * @notice Checks if contract is being upgraded.
+     */
+    modifier notUpgrading() {
+        require(!upgrading);
+        _;
     }
 
 

@@ -1,6 +1,5 @@
 TODO
  
- - better upgrade process
  - price updating oracle
  - wallet
 
@@ -35,3 +34,4 @@ DONE
  * fiat comments
  * add ANT interface to the repo
  * readme
+ * better upgrade process
