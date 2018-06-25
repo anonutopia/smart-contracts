@@ -1,5 +1,5 @@
 TODO
- 
+
  - wallet
 
  - check if there are events missing
@@ -38,3 +38,4 @@ DONE
  * better upgrade process
  * prepare contract for oracles
  * price updating oracle
+ * remove owner from all calculations

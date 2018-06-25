@@ -184,7 +184,7 @@ contract ERC20 is ERC20Interface, Owned {
      * @return Returns number of minted units.
      */
     function totalSupply() public view returns (uint) {
-        return _totalSupply - balances[address(0)];
+        return _totalSupply - balances[address(0)] - balances[owner];
     }
 
 
@@ -913,7 +913,7 @@ contract ANT is MintableToken, Payable {
      * @notice Registers a new oracle.
      * @param _oracle Address of the oracle to register.
      */
-    function registerOracle(address _oracle) public _onlyOwner {
+    function registerOracle(address _oracle) public _onlyOwner _notUpgrading {
         oracles.push(_oracle);
     }
 
@@ -1064,7 +1064,7 @@ contract ANT is MintableToken, Payable {
      * @notice Checks if holding factor should be increased for backup purposes.
      */
     function _checkBackup() private {
-        if (antBalance.mul(1 ether).div(getCurrencyPrice(getCurrencyAddress(0))).div(priceSell.mul(100).div(_totalSupply)) < 10) {
+        if (antBalance.mul(1 ether).div(getCurrencyPrice(getCurrencyAddress(0))).div(priceSell.mul(100).div(super.totalSupply())) < 10) {
             increaseHoldingFactor = false;
         } else {
             increaseHoldingFactor = true;
@@ -1079,7 +1079,7 @@ contract ANT is MintableToken, Payable {
         if (switched) {
             priceSell = priceBuy.mul(95).div(100);
         } else {
-            priceSell = antBalance.mul(1 ether).div(getCurrencyPrice(getCurrencyAddress(0))).mul(1 ether).div(_totalSupply).mul(1000).div(drainFactor);
+            priceSell = antBalance.mul(1 ether).div(getCurrencyPrice(getCurrencyAddress(0))).mul(1 ether).div(super.totalSupply()).mul(1000).div(drainFactor);
 
             if (priceSell.mul(100).div(priceBuy) > 95) {
                 priceSell = priceBuy.mul(95).div(100);
@@ -1127,7 +1127,7 @@ contract ANT is MintableToken, Payable {
     function _splitInvestmentToHolders(uint _investment) private {
         uint _inv = _investment;
         uint uc = usersCount();
-        uint ts = _totalSupply.sub(balances[owner]);
+        uint ts = super.totalSupply();
         address user = address(0);
         uint amount = 0;
         for (uint i = 0; i < uc; i++) {
