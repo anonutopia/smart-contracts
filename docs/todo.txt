@@ -1,9 +1,8 @@
 TODO
  
- - check if there are events missing
- - price updating oracle
  - wallet
 
+ - check if there are events missing
  - spreads
  - anote price drops
  - check coding style
@@ -26,7 +25,7 @@ DONE
  * fix upgrade
  * finish all comments
  * fix referral system
- * premine
+ * initial balance option
  * advance upgrade
  * remove hardcoded euro
  * optimize gas
@@ -37,3 +36,5 @@ DONE
  * add ANT interface to the repo
  * readme
  * better upgrade process
+ * prepare contract for oracles
+ * price updating oracle

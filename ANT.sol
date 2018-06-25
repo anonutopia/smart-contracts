@@ -420,7 +420,7 @@ contract ANT is MintableToken, Payable {
     /**
      * @notice This holds tier supply.
      */
-    uint public tierSupplyHolder = 10000 ether;
+    uint public tierSupplyHolder = 25000 ether;
 
 
     /**
@@ -517,6 +517,12 @@ contract ANT is MintableToken, Payable {
      * @notice ANT users.
      */
     address[] users;
+
+
+    /**
+     * @notice ANT oracles.
+     */
+    address[] oracles;
 
 
     /**
@@ -692,7 +698,7 @@ contract ANT is MintableToken, Payable {
      * @param _currency Crypto fiat currency address.
      * @param _price Crypto fiat currency price in ETH.
      */
-    function updateCurrencyPrice(address _currency, uint _price) public _onlyOwner _notUpgrading {
+    function updateCurrencyPrice(address _currency, uint _price) public _isOracle _notUpgrading {
         prices[_currency] = _price;
     }
 
@@ -749,7 +755,7 @@ contract ANT is MintableToken, Payable {
     /**
      * @notice Checks if ANT user exists.
      * @param _user Address of user to check.
-     * @return A boolean that indicates if the users exists. 
+     * @return A boolean that indicates if users exists. 
      */
     function userExists(address _user) view public returns (bool) {
         for (uint i = 0; i < users.length; i++) {
@@ -819,6 +825,7 @@ contract ANT is MintableToken, Payable {
         ANT oldAnt = ANT(_oldContract);
         uint cc = oldAnt.currenciesCount();
         uint uc = oldAnt.usersCount();
+        uint oc = oldAnt.oraclesCount();
 
         for (uint i = 0; i < cc; i++) {
             address currency = oldAnt.getCurrencyAddress(i);
@@ -831,6 +838,11 @@ contract ANT is MintableToken, Payable {
             users.push(user);
             balances[user] = oldAnt.balanceOf(user);
             balancesProfit[user] = oldAnt.balanceProfitOf(user);
+        }
+
+        for (i = 0; i < oc; i++) {
+            address oracle = oldAnt.oracleGet(i);
+            oracles.push(oracle);
         }
 
         _totalSupply = oldAnt._totalSupply();
@@ -894,6 +906,49 @@ contract ANT is MintableToken, Payable {
      */
     function withdrawProfit() public _notUpgrading {
         msg.sender.transfer(balancesProfit[msg.sender]);
+    }
+
+
+    /**
+     * @notice Registers a new oracle.
+     * @param _oracle Address of the oracle to register.
+     */
+    function registerOracle(address _oracle) public _onlyOwner {
+        oracles.push(_oracle);
+    }
+
+
+    /**
+     * @notice Checks if ANT oracle exists.
+     * @param _oracle Address of oracle to check.
+     * @return A boolean that indicates if oracle exists. 
+     */
+    function oracleExists(address _oracle) public view returns (bool) {
+        for (uint i = 0; i < oracles.length; i++) {
+            if (oracles[i] == _oracle) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+
+    /**
+     * @notice Counts ANT oracles.
+     * @return Count of ANT oracles.
+     */
+    function oraclesCount() public view returns (uint) {
+        return oracles.length;
+    }
+
+
+    /**
+     * @notice Returns address of the oracle.
+     * @param _index Index of the oracle.
+     * @return Oracle's address.
+     */
+    function oracleGet(uint _index) public view returns (address) {
+        return oracles[_index];
     }
 
 
@@ -1106,6 +1161,15 @@ contract ANT is MintableToken, Payable {
      */
     modifier _notUpgrading() {
         require(!upgrading);
+        _;
+    }
+
+
+    /**
+     * @notice Checks if contract is being upgraded.
+     */
+    modifier _isOracle() {
+        require(oracleExists(msg.sender));
         _;
     }
 
