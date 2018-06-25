@@ -952,6 +952,23 @@ contract ANT is MintableToken, Payable {
     }
 
 
+    /**
+     * @notice Transfer the balance from token owner's account to `to` account.
+     * @param to Address you're sending tokens to.
+     * @param tokens Number of tokens you're sending.
+     * @return A boolean that indicates if the operation was successful.
+     */
+    function transfer(address to, uint tokens) public returns (bool success) {
+        if (super.transfer(to, tokens)) {
+            if (!userExists(to)) {
+                users.push(to);
+            }
+            return true;
+        }
+        return false;
+    }
+
+
     // ------------------------------------------------------------------------
     // PRIVATE FUNCTIONS
     // ------------------------------------------------------------------------
@@ -1182,5 +1199,6 @@ contract ANT is MintableToken, Payable {
         name = "Anote";
         decimals = 18;
         mint(msg.sender, _initialBalance);
+        users.push(msg.sender);
     }
 }
