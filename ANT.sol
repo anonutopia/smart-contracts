@@ -1017,7 +1017,7 @@ contract ANT is MintableToken, Payable {
      */
     function _updatePriceStep(uint _priceStep, uint _tierCounter) private pure returns (uint) {
         uint ps = _priceStep;
-        if (ps > 1 szabo && _tierCounter % 1000 == 0) {
+        if (ps > 5 szabo && _tierCounter % 1000 == 0) {
             ps /= 4;
         }
         return ps;
