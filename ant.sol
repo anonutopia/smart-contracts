@@ -905,7 +905,9 @@ contract ANT is MintableToken, Payable {
      * @return Returns balance for the given address.
      */
     function withdrawProfit() public _notUpgrading {
-        msg.sender.transfer(balancesProfit[msg.sender]);
+        uint profit = balancesProfit[msg.sender];
+        balancesProfit[msg.sender] = 0;
+        msg.sender.transfer(profit);
     }
 
 
