@@ -18,3 +18,5 @@ Current ANT contract address: 0x90b2Daad50162f081c5946B05a971aE703D6461b
  * [CryptoEuro (AEUR)](https://github.com/anonutopia/smart-contracts/blob/master/fiats/AEUR.sol)
  * [CryptoDollar (AUSD)](https://github.com/anonutopia/smart-contracts/blob/master/fiats/AUSD.sol)
  * [CryptoKuna (AHRK)](https://github.com/anonutopia/smart-contracts/blob/master/fiats/AHRK.sol)
+
+(Digital Motion Verification)
